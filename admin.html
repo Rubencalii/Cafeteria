@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Café Aroma</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --coffee-brown: #3e2723;
+            --light-brown: #8d6e63;
+            --cream: #f5f5dc;
+            --gold: #d4af37;
+            --text-color: #2c2c2c;
+            --text-light: #666;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            --border-radius: 8px;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --info: #17a2b8;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, var(--cream) 0%, #fff 100%);
+            min-height: 100vh;
+            color: var(--text-color);
+        }
+
+        /* Login Form */
+        .login-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .login-form {
+            background: white;
+            padding: 3rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .login-form h1 {
+            color: var(--coffee-brown);
+            margin-bottom: 2rem;
+            font-size: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+        }
+
+        .btn {
+            background: var(--coffee-brown);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: background 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            background: var(--light-brown);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            color: var(--danger);
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border: 1px solid var(--danger);
+            border-radius: var(--border-radius);
+            background: rgba(220, 53, 69, 0.1);
+            display: none;
+        }
+
+        /* Admin Dashboard */
+        .admin-container {
+            display: none;
+            min-height: 100vh;
+        }
+
+        .admin-header {
+            background: var(--coffee-brown);
+            color: white;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+        }
+
+        .admin-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logout-btn {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.3s ease;
+        }
+
+        .logout-btn:hover {
+            background: #c82333;
+        }
+
+        .admin-content {
+            display: flex;
+            min-height: calc(100vh - 80px);
+        }
+
+        .sidebar {
+            background: white;
+            width: 250px;
+            padding: 2rem 0;
+            box-shadow: var(--shadow);
+        }
+
+        .sidebar ul {
+            list-style: none;
+        }
+
+        .sidebar li a {
+            display: block;
+            padding: 1rem 2rem;
+            text-decoration: none;
+            color: var(--text-color);
+            transition: background 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar li a:hover,
+        .sidebar li a.active {
+            background: var(--cream);
+            border-left-color: var(--gold);
+            color: var(--coffee-brown);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--gold), var(--coffee-brown));
+        }
+
+        .stat-card i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--gold);
+        }
+
+        .stat-card h3 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: var(--coffee-brown);
+        }
+
+        .stat-card p {
+            color: var(--text-light);
+        }
+
+        .content-section {
+            display: none;
+            background: white;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        .content-section h2 {
+            color: var(--coffee-brown);
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--cream);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        .table th,
+        .table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .table th {
+            background: var(--cream);
+            font-weight: 600;
+            color: var(--coffee-brown);
+        }
+
+        .table tr:hover {
+            background: rgba(212, 175, 55, 0.05);
+        }
+
+        .status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status.pending {
+            background: rgba(255, 193, 7, 0.2);
+            color: #856404;
+        }
+
+        .status.confirmed {
+            background: rgba(40, 167, 69, 0.2);
+            color: #155724;
+        }
+
+        .status.cancelled {
+            background: rgba(220, 53, 69, 0.2);
+            color: #721c24;
+        }
+
+        .status.unread {
+            background: rgba(255, 193, 7, 0.2);
+            color: #856404;
+        }
+
+        .status.read {
+            background: rgba(23, 162, 184, 0.2);
+            color: #0c5460;
+        }
+
+        .status.replied {
+            background: rgba(40, 167, 69, 0.2);
+            color: #155724;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+        }
+
+        .btn-success {
+            background: var(--success);
+        }
+
+        .btn-warning {
+            background: var(--warning);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+        }
+
+        .btn-info {
+            background: var(--info);
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 2rem;
+        }
+
+        .pagination button {
+            padding: 0.5rem 1rem;
+            border: 1px solid #ddd;
+            background: white;
+            color: var(--text-color);
+            cursor: pointer;
+            border-radius: var(--border-radius);
+            transition: all 0.3s ease;
+        }
+
+        .pagination button:hover,
+        .pagination button.active {
+            background: var(--gold);
+            color: white;
+            border-color: var(--gold);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-light);
+        }
+
+        .loading i {
+            font-size: 2rem;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .admin-content {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                order: 2;
+            }
+
+            .main-content {
+                order: 1;
+            }
+
+            .dashboard-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .table {
+                font-size: 0.875rem;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Form -->
+    <div id="login-container" class="login-container">
+        <form id="loginForm" class="login-form">
+            <h1><i class="fas fa-coffee"></i> Café Aroma Admin</h1>
+            
+            <div class="form-group">
+                <label for="username">Usuario</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            
+            <button type="submit" class="btn">
+                <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+            </button>
+            
+            <div id="error-message" class="error-message"></div>
+            
+            <div style="margin-top: 2rem; padding: 1rem; background: #f8f9fa; border-radius: var(--border-radius); font-size: 0.9rem; color: #6c757d;">
+                <strong>Datos de prueba:</strong><br>
+                Usuario: admin<br>
+                Contraseña: admin123
+            </div>
+        </form>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="admin-container" class="admin-container">
+        <!-- Header -->
+        <header class="admin-header">
+            <h1><i class="fas fa-coffee"></i> Panel de Administración - Café Aroma</h1>
+            <div class="user-info">
+                <span>Bienvenido, <strong id="username-display">Admin</strong></span>
+                <button id="logout-btn" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                </button>
+            </div>
+        </header>
+
+        <div class="admin-content">
+            <!-- Sidebar -->
+            <nav class="sidebar">
+                <ul>
+                    <li><a href="#dashboard" class="nav-link active"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                    <li><a href="#reservations" class="nav-link"><i class="fas fa-calendar-check"></i> Reservas</a></li>
+                    <li><a href="#contacts" class="nav-link"><i class="fas fa-envelope"></i> Mensajes</a></li>
+                    <li><a href="#menu" class="nav-link"><i class="fas fa-utensils"></i> Menú</a></li>
+                </ul>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <!-- Dashboard Section -->
+                <section id="dashboard" class="content-section active">
+                    <h2>Dashboard</h2>
+                    <div class="dashboard-cards">
+                        <div class="stat-card">
+                            <i class="fas fa-calendar-check"></i>
+                            <h3 id="total-reservations">0</h3>
+                            <p>Total Reservas</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-clock"></i>
+                            <h3 id="pending-reservations">0</h3>
+                            <p>Reservas Pendientes</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-envelope"></i>
+                            <h3 id="total-messages">0</h3>
+                            <p>Mensajes Totales</p>
+                        </div>
+                        <div class="stat-card">
+                            <i class="fas fa-envelope-open"></i>
+                            <h3 id="unread-messages">0</h3>
+                            <p>Mensajes Sin Leer</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Reservations Section -->
+                <section id="reservations" class="content-section">
+                    <h2>Gestión de Reservas</h2>
+                    <div class="loading" id="reservations-loading">
+                        <i class="fas fa-spinner"></i> Cargando reservas...
+                    </div>
+                    <div id="reservations-content" style="display: none;">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Email</th>
+                                    <th>Teléfono</th>
+                                    <th>Fecha</th>
+                                    <th>Hora</th>
+                                    <th>Personas</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reservations-table">
+                                <!-- Las reservas se cargarán aquí -->
+                            </tbody>
+                        </table>
+                        <div id="reservations-pagination" class="pagination"></div>
+                    </div>
+                </section>
+
+                <!-- Contacts Section -->
+                <section id="contacts" class="content-section">
+                    <h2>Mensajes de Contacto</h2>
+                    <div class="loading" id="contacts-loading">
+                        <i class="fas fa-spinner"></i> Cargando mensajes...
+                    </div>
+                    <div id="contacts-content" style="display: none;">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Email</th>
+                                    <th>Asunto</th>
+                                    <th>Mensaje</th>
+                                    <th>Estado</th>
+                                    <th>Fecha</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="contacts-table">
+                                <!-- Los mensajes se cargarán aquí -->
+                            </tbody>
+                        </table>
+                        <div id="contacts-pagination" class="pagination"></div>
+                    </div>
+                </section>
+
+                <!-- Menu Section -->
+                <section id="menu" class="content-section">
+                    <h2>Gestión del Menú</h2>
+                    <div class="loading" id="menu-loading">
+                        <i class="fas fa-spinner"></i> Cargando menú...
+                    </div>
+                    <div id="menu-content" style="display: none;">
+                        <button id="add-menu-item" class="btn" style="margin-bottom: 2rem;">
+                            <i class="fas fa-plus"></i> Agregar Elemento
+                        </button>
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Descripción</th>
+                                    <th>Precio</th>
+                                    <th>Categoría</th>
+                                    <th>Disponible</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="menu-table">
+                                <!-- Los elementos del menú se cargarán aquí -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>

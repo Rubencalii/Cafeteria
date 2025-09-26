@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Café Aroma - Tu rincón de sabor</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Efectos de Partículas -->
+    <canvas id="particleCanvas"></canvas>
+    
+    <!-- SVG Ondas Animadas -->
+    <div class="svg-waves">
+        <svg class="wave-top" viewBox="0 0 1200 120" preserveAspectRatio="none">
+            <path d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" opacity=".25" class="shape-fill-1"></path>
+            <path d="M0,0V15.81C13,36.92,27.64,56.86,47.69,72.05,99.41,111.27,165,111,224.58,91.58c31.15-10.15,60.09-26.07,89.67-39.8,40.92-19,84.73-46,130.83-49.67,36.26-2.85,70.9,9.42,98.6,31.56,31.77,25.39,62.32,62,103.63,73,40.44,10.79,81.35-6.69,119.13-24.28s75.16-39,116.92-43.05c59.73-5.85,113.28,22.88,168.9,38.84,30.2,8.66,59,6.17,87.09-7.5,22.43-10.89,48-26.93,60.65-49.24V0Z" opacity=".5" class="shape-fill-2"></path>
+            <path d="M0,0V5.63C149.93,59,314.09,71.32,475.83,42.57c43-7.64,84.23-20.12,127.61-26.46,59-8.63,112.48,12.24,165.56,35.4C827.93,77.22,886,95.24,951.2,90c86.53-7,172.46-45.71,248.8-84.81V0Z" class="shape-fill-3"></path>
+        </svg>
+        
+        <svg class="wave-bottom" viewBox="0 0 1200 120" preserveAspectRatio="none">
+            <path d="M985.66,92.83C906.67,72,823.78,31,743.84,14.19c-82.26-17.34-168.06-16.33-250.45.39-57.84,11.73-114,31.07-172,41.86A600.21,600.21,0,0,1,0,27.35V120H1200V95.8C1132.19,118.92,1055.71,111.31,985.66,92.83Z" class="shape-fill-4"></path>
+        </svg>
+    </div>
+    
+    <!-- Cursor Personalizado -->
+    <div class="custom-cursor">
+        <div class="cursor-dot"></div>
+        <div class="cursor-outline"></div>
+    </div>
+    
+    <!-- Preloader -->
+    <div id="preloader" class="preloader">
+        <div class="preloader-content">
+            <div class="coffee-cup">
+                <div class="cup">
+                    <div class="coffee-liquid"></div>
+                    <div class="coffee-foam"></div>
+                    <div class="cup-handle"></div>
+                </div>
+                <div class="steam">
+                    <div class="steam-line steam-1"></div>
+                    <div class="steam-line steam-2"></div>
+                    <div class="steam-line steam-3"></div>
+                </div>
+            </div>
+            <h2>Café Aroma</h2>
+            <p>Preparando tu experiencia...</p>
+            <div class="loading-bar">
+                <div class="loading-progress"></div>
+            </div>
+        </div>
+    </div>
+    <!-- Header -->
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-container">
+                <div class="logo">
+                    <img src="https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=100&h=100&fit=crop&crop=center" alt="Café Aroma Logo">
+                    <span>Café Aroma</span>
+                </div>
+                <ul class="nav-menu">
+                    <li><a href="#home">Inicio</a></li>
+                    <li><a href="#about">Nosotros</a></li>
+                    <li><a href="#menu">Menú</a></li>
+                    <li><a href="#awards">Premios</a></li>
+                    <li><a href="#services">Servicios</a></li>
+                    <li><a href="#gallery">Galería</a></li>
+                    <li><a href="#testimonials">Testimonios</a></li>
+                    <li><a href="#reservations">Reservas</a></li>
+                    <li><a href="#contact">Contacto</a></li>
+                    <li>
+                        <div class="theme-switch-wrapper">
+                            <label class="theme-switch" for="checkbox">
+                                <input type="checkbox" id="checkbox" />
+                                <div class="slider round">
+                                    <i class="fas fa-sun sun-icon"></i>
+                                    <i class="fas fa-moon moon-icon"></i>
+                                </div>
+                            </label>
+                        </div>
+                    </li>
+                </ul>
+                <div class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            </div>
+        </nav>
+        
+        <section id="home" class="hero">
+            <div class="hero-content">
+                <h1 class="glow-text">Café Aroma</h1>
+                <p class="tagline">Donde cada taza cuenta una historia</p>
+                <p class="hero-description">Bienvenido a nuestro acogedor espacio donde el aroma del café recién tostado se mezcla con momentos únicos</p>
+                <div class="hero-buttons">
+                    <a href="#menu" class="btn primary ripple magnetic-btn">Ver Menú</a>
+                    <a href="#reservations" class="btn secondary ripple magnetic-btn">Reservar Mesa</a>
+                </div>
+            </div>
+            <div class="hero-image">
+                <img src="https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=600&h=400&fit=crop&crop=center" alt="Interior acogedor de Café Aroma">
+            </div>
+        </section>
+    </header>
+
+    <!-- Sobre Nosotros -->
+    <section id="about" class="about">
+        <div class="container">
+            <div class="about-content">
+                <div class="about-text">
+                    <h2>Sobre Nosotros</h2>
+                    <p class="lead">Desde 2015, Café Aroma ha sido el corazón de nuestra comunidad, un lugar donde las historias se comparten y los sabores cobran vida.</p>
+                    <p>Nacimos con la pasión de crear un espacio único donde cada visitante se sienta como en casa. Nuestro compromiso es ofrecer café de la más alta calidad, seleccionado directamente de pequeños productores locales, y una experiencia gastronómica que despierte todos tus sentidos.</p>
+                    <p>En Café Aroma, creemos que los mejores momentos suceden alrededor de una buena taza de café, acompañada de conversaciones genuinas y sabores auténticos.</p>
+                    <div class="about-stats">
+                        <div class="stat float">
+                            <i class="fas fa-coffee"></i>
+                            <span class="number">50,000+</span>
+                            <span class="label">Tazas servidas</span>
+                        </div>
+                        <div class="stat float">
+                            <i class="fas fa-heart"></i>
+                            <span class="number">5,000+</span>
+                            <span class="label">Clientes felices</span>
+                        </div>
+                        <div class="stat float">
+                            <i class="fas fa-award"></i>
+                            <span class="number">8</span>
+                            <span class="label">Años de experiencia</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="about-image">
+                    <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=500&h=600&fit=crop&crop=center" alt="Barista preparando café">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Menú -->
+    <section id="menu" class="menu">
+        <div class="container">
+            <div class="section-header">
+                <h2>Nuestro Menú</h2>
+                <p>Descubre nuestros platos y bebidas más populares</p>
+            </div>
+            <div id="menu-grid" class="menu-grid">
+                <!-- El menú se cargará dinámicamente desde la base de datos -->
+                <div class="menu-loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Cargando nuestro delicioso menú...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Premios y Prensa -->
+    <section id="awards" class="awards">
+        <div class="container">
+            <div class="section-header">
+                <h2>Premios y Reconocimientos</h2>
+                <p>Orgullosos de ser reconocidos por nuestra excelencia</p>
+            </div>
+            <div class="awards-grid">
+                <div class="award-card">
+                    <i class="fas fa-trophy"></i>
+                    <h3>Mejor Café Local 2023</h3>
+                    <p>Revista Gastronómica</p>
+                </div>
+                <div class="award-card">
+                    <i class="fas fa-star"></i>
+                    <h3>5 Estrellas TripAdvisor</h3>
+                    <p>Certificado de Excelencia</p>
+                </div>
+                <div class="award-card">
+                    <i class="fas fa-medal"></i>
+                    <h3>Coffee Shop del Año</h3>
+                    <p>Cámara de Comercio Local</p>
+                </div>
+                <div class="award-card">
+                    <i class="fas fa-certificate"></i>
+                    <h3>Comercio Justo</h3>
+                    <p>Certificación Fair Trade</p>
+                </div>
+            </div>
+            <div class="press-mentions">
+                <h3>Menciones en Prensa</h3>
+                <div class="press-logos">
+                    <div class="press-item">"El mejor café de la ciudad"</div>
+                    <div class="press-item">"Ambiente acogedor y único"</div>
+                    <div class="press-item">"Imperdible para los amantes del café"</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Servicios -->
+    <section id="services" class="services">
+        <div class="container">
+            <div class="section-header">
+                <h2>Nuestros Servicios</h2>
+                <p>Te ofrecemos múltiples formas de disfrutar nuestra experiencia</p>
+            </div>
+            <div class="services-grid">
+                <div class="service-card">
+                    <i class="fas fa-motorcycle"></i>
+                    <h3>Delivery</h3>
+                    <p>Llevamos tus bebidas y alimentos favoritos directamente a tu hogar u oficina</p>
+                    <ul>
+                        <li>Entrega en 30-45 minutos</li>
+                        <li>Empaque térmico especial</li>
+                        <li>Disponible de 8:00 AM a 9:00 PM</li>
+                    </ul>
+                </div>
+                <div class="service-card">
+                    <i class="fas fa-utensils"></i>
+                    <h3>Catering</h3>
+                    <p>Servicio de catering para eventos empresariales, reuniones y celebraciones</p>
+                    <ul>
+                        <li>Menús personalizados</li>
+                        <li>Servicio completo incluido</li>
+                        <li>Para eventos de 10 a 200 personas</li>
+                    </ul>
+                </div>
+                <div class="service-card">
+                    <i class="fas fa-calendar-alt"></i>
+                    <h3>Reservas</h3>
+                    <p>Reserva tu mesa favorita y asegura tu lugar en nuestro acogedor espacio</p>
+                    <ul>
+                        <li>Reservas online 24/7</li>
+                        <li>Mesas para grupos grandes</li>
+                        <li>Área privada disponible</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Galería de Fotos -->
+    <section id="gallery" class="gallery">
+        <div class="container">
+            <div class="section-header">
+                <h2>Nuestra Galería</h2>
+                <p>Descubre la atmósfera única de Café Aroma</p>
+            </div>
+            <div class="gallery-filters">
+                <button class="filter-btn active" data-filter="all">Todas</button>
+                <button class="filter-btn" data-filter="interior">Interior</button>
+                <button class="filter-btn" data-filter="food">Comida</button>
+                <button class="filter-btn" data-filter="drinks">Bebidas</button>
+                <button class="filter-btn" data-filter="events">Eventos</button>
+            </div>
+            <div class="gallery-grid">
+                <div class="gallery-item" data-category="interior">
+                    <img src="https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=400&h=400&fit=crop&crop=center" alt="Interior de la cafetería">
+                    <div class="gallery-overlay">
+                        <i class="fas fa-search-plus"></i>
+                    </div>
+                </div>
+                <div class="gallery-item" data-category="food">
+                    <img src="https://images.unsplash.com/photo-1571115764595-644a1f56a55c?w=400&h=400&fit=crop&crop=center" alt="Tostada de aguacate">
+                    <div class="gallery-overlay">
+                        <i class="fas fa-search-plus"></i>
+                    </div>
+                </div>
+                <div class="gallery-item" data-category="drinks">
+                    <img src="https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400&h=400&fit=crop&crop=center" alt="Latte con arte">
+                    <div class="gallery-overlay">
+                        <i class="fas fa-search-plus"></i>
+                    </div>
+                </div>
+                <div class="gallery-item" data-category="interior">
+                    <img src="https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=400&h=400&fit=crop&crop=center" alt="Barista trabajando">
+                    <div class="gallery-overlay">
+                        <i class="fas fa-search-plus"></i>
+                    </div>
+                </div>
+                <div class="gallery-item" data-category="drinks">
+                    <img src="https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=400&fit=crop&crop=center" alt="Café espresso">
+                    <div class="gallery-overlay">
+                        <i class="fas fa-search-plus"></i>
+                    </div>
+                </div>
+                <div class="gallery-item" data-category="food">
+                    <img src="https://images.unsplash.com/photo-1541167760496-1628856ab772?w=400&h=400&fit=crop&crop=center" alt="Croissant fresco">
+                    <div class="gallery-overlay">
+                        <i class="fas fa-search-plus"></i>
+                    </div>
+                </div>
+                <div class="gallery-item" data-category="events">
+                    <img src="https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=400&h=400&fit=crop&crop=center" alt="Evento en la cafetería">
+                    <div class="gallery-overlay">
+                        <i class="fas fa-search-plus"></i>
+                    </div>
+                </div>
+                <div class="gallery-item" data-category="interior">
+                    <img src="https://images.unsplash.com/photo-1498804103079-a6351b050096?w=400&h=400&fit=crop&crop=center" alt="Ambiente acogedor">
+                    <div class="gallery-overlay">
+                        <i class="fas fa-search-plus"></i>
+                    </div>
+                </div>
+                <div class="gallery-item" data-category="drinks">
+                    <img src="https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=400&fit=crop&crop=center" alt="Cappuccino artístico">
+                    <div class="gallery-overlay">
+                        <i class="fas fa-search-plus"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Lightbox -->
+    <div id="lightbox" class="lightbox">
+        <div class="lightbox-content">
+            <span class="lightbox-close">&times;</span>
+            <img id="lightbox-img" src="" alt="">
+            <div class="lightbox-nav">
+                <button id="prev-btn" class="nav-btn">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <button id="next-btn" class="nav-btn">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Testimonios -->
+    <section id="testimonials" class="testimonials">
+        <div class="container">
+            <div class="section-header">
+                <h2>Lo que dicen nuestros clientes</h2>
+                <p>Experiencias reales de quienes nos visitan</p>
+            </div>
+            <div class="testimonials-grid">
+                <div class="testimonial-card">
+                    <div class="stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <p>"El mejor café que he probado en la ciudad. El ambiente es súper acogedor y el personal increíblemente amable. ¡Mi lugar favorito para trabajar!"</p>
+                    <div class="customer">
+                        <img src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=60&h=60&fit=crop&crop=center" alt="María González">
+                        <div>
+                            <strong>María González</strong>
+                            <span>Diseñadora Gráfica</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <p>"Vengo aquí todas las mañanas antes del trabajo. Su latte es perfecto y las tostadas de aguacate son deliciosas. ¡Altamente recomendado!"</p>
+                    <div class="customer">
+                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&h=60&fit=crop&crop=center" alt="Carlos Rodríguez">
+                        <div>
+                            <strong>Carlos Rodríguez</strong>
+                            <span>Empresario</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="testimonial-card">
+                    <div class="stars">
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                        <i class="fas fa-star"></i>
+                    </div>
+                    <p>"Un lugar mágico para reunirse con amigos. La decoración es preciosa y tienen una selección increíble de postres. ¡Volveré sin duda!"</p>
+                    <div class="customer">
+                        <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=60&h=60&fit=crop&crop=center" alt="Ana López">
+                        <div>
+                            <strong>Ana López</strong>
+                            <span>Estudiante</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sistema de Reservas -->
+    <section id="reservations" class="reservations">
+        <div class="container">
+            <div class="section-header">
+                <h2>Reserva tu Mesa</h2>
+                <p>Asegura tu lugar en nuestro acogedor espacio</p>
+            </div>
+            <div class="reservation-content">
+                <div class="reservation-form">
+                    <form id="reservationForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="reservation-name">Nombre completo</label>
+                                <input type="text" id="reservation-name" name="name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="reservation-email">Email</label>
+                                <input type="email" id="reservation-email" name="email" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="reservation-phone">Teléfono</label>
+                                <input type="tel" id="reservation-phone" name="phone" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="reservation-guests">Número de personas</label>
+                                <select id="reservation-guests" name="guests" required>
+                                    <option value="">Seleccionar</option>
+                                    <option value="1">1 persona</option>
+                                    <option value="2">2 personas</option>
+                                    <option value="3">3 personas</option>
+                                    <option value="4">4 personas</option>
+                                    <option value="5">5 personas</option>
+                                    <option value="6">6 personas</option>
+                                    <option value="7+">7+ personas</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="reservation-date">Fecha</label>
+                                <input type="date" id="reservation-date" name="date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="reservation-time">Hora</label>
+                                <select id="reservation-time" name="time" required>
+                                    <option value="">Seleccionar hora</option>
+                                    <option value="08:00">08:00 AM</option>
+                                    <option value="08:30">08:30 AM</option>
+                                    <option value="09:00">09:00 AM</option>
+                                    <option value="09:30">09:30 AM</option>
+                                    <option value="10:00">10:00 AM</option>
+                                    <option value="10:30">10:30 AM</option>
+                                    <option value="11:00">11:00 AM</option>
+                                    <option value="11:30">11:30 AM</option>
+                                    <option value="12:00">12:00 PM</option>
+                                    <option value="12:30">12:30 PM</option>
+                                    <option value="13:00">01:00 PM</option>
+                                    <option value="13:30">01:30 PM</option>
+                                    <option value="14:00">02:00 PM</option>
+                                    <option value="14:30">02:30 PM</option>
+                                    <option value="15:00">03:00 PM</option>
+                                    <option value="15:30">03:30 PM</option>
+                                    <option value="16:00">04:00 PM</option>
+                                    <option value="16:30">04:30 PM</option>
+                                    <option value="17:00">05:00 PM</option>
+                                    <option value="17:30">05:30 PM</option>
+                                    <option value="18:00">06:00 PM</option>
+                                    <option value="18:30">06:30 PM</option>
+                                    <option value="19:00">07:00 PM</option>
+                                    <option value="19:30">07:30 PM</option>
+                                    <option value="20:00">08:00 PM</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="reservation-notes">Notas especiales (opcional)</label>
+                            <textarea id="reservation-notes" name="notes" rows="3" placeholder="Alergias, celebraciones, preferencias especiales..."></textarea>
+                        </div>
+                        <button type="submit" class="btn primary reservation-btn">
+                            <i class="fas fa-calendar-check"></i>
+                            Reservar Mesa
+                        </button>
+                    </form>
+                </div>
+                <div class="reservation-info">
+                    <div class="info-card">
+                        <i class="fas fa-clock"></i>
+                        <h3>Horarios de Atención</h3>
+                        <p>Lunes a Viernes: 7:00 AM - 9:00 PM<br>
+                           Sábados y Domingos: 8:00 AM - 10:00 PM</p>
+                    </div>
+                    <div class="info-card">
+                        <i class="fas fa-users"></i>
+                        <h3>Política de Reservas</h3>
+                        <p>• Reservas hasta 30 días de anticipación<br>
+                           • Grupos de más de 6 personas requieren confirmación<br>
+                           • Cancelación gratuita hasta 2 horas antes</p>
+                    </div>
+                    <div class="info-card">
+                        <i class="fas fa-gift"></i>
+                        <h3>Eventos Especiales</h3>
+                        <p>¿Celebrando algo especial? Menciona tu evento en las notas y te ayudaremos a hacer tu visita memorable.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contacto -->
+    <section id="contact" class="contact">
+        <div class="container">
+            <div class="section-header">
+                <h2>Contáctanos</h2>
+                <p>Ven a visitarnos o ponte en contacto con nosotros</p>
+            </div>
+            <div class="contact-top-section">
+                <div class="contact-info">
+                    <div class="contact-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <div>
+                            <h3>Dirección</h3>
+                            <p>Calle del Café 123<br>Centro Histórico, Ciudad</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-phone"></i>
+                        <div>
+                            <h3>Teléfono</h3>
+                            <p>+34 123 456 789</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-clock"></i>
+                        <div>
+                            <h3>Horarios</h3>
+                            <p>Lunes a Viernes: 7:00 AM - 9:00 PM<br>
+                               Sábado y Domingo: 8:00 AM - 10:00 PM</p>
+                        </div>
+                    </div>
+                    <div class="contact-item">
+                        <i class="fas fa-envelope"></i>
+                        <div>
+                            <h3>Email</h3>
+                            <p>hola@cafearoma.com</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="contact-form">
+                    <h3>Envíanos un mensaje</h3>
+                    <form id="contactForm">
+                        <div class="form-group">
+                            <input type="text" id="name" name="name" placeholder="Tu nombre" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="email" id="email" name="email" placeholder="Tu email" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="tel" id="phone" name="phone" placeholder="Tu teléfono">
+                        </div>
+                        <div class="form-group">
+                            <textarea id="message" name="message" placeholder="Tu mensaje" rows="5" required></textarea>
+                        </div>
+                        <button type="submit" class="btn primary">Enviar mensaje</button>
+                    </form>
+                </div>
+            </div>
+            <div class="map-container-full">
+                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3153.835434509374!2d144.96305761531654!3d-37.81362797975171!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x6ad65d43f1f34e7b%3A0x5045675218ce6e0!2sMelbourne%20VIC%2C%20Australia!5e0!3m2!1sen!2sus!4v1635724543234!5m2!1sen!2sus" 
+                        width="100%" height="400" style="border:0;" allowfullscreen="" loading="lazy">
+                </iframe>
+            </div>
+            <div class="social-links">
+                <h3>Síguenos en redes sociales</h3>
+                <div class="social-icons">
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-tiktok"></i></a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <img src="https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=100&h=100&fit=crop&crop=center" alt="Café Aroma Logo">
+                    <span>Café Aroma</span>
+                </div>
+                <p>&copy; 2023 Café Aroma. Todos los derechos reservados. Hecho con ❤️ para los amantes del café.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scroll to Top Button -->
+    <button id="scrollToTop" class="scroll-to-top">
+        <i class="fas fa-chevron-up"></i>
+    </button>
+
+    <script src="script.js"></script>
+</body>
+</html>
