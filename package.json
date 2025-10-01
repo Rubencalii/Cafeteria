@@ -8,7 +8,12 @@
     "dev": "nodemon server.js",
     "init-db": "node database/init.js",
     "setup": "npm install && node database/init.js",
-    "production": "NODE_ENV=production node server.js"
+    "production": "NODE_ENV=production node server-production.js",
+    "test": "node tests/basic-tests.js",
+    "test:api": "echo 'API tests coming soon'",
+    "test:db": "echo 'Database tests coming soon'",
+    "logs": "tail -f logs/app-$(date +%Y-%m-%d).log",
+    "clean-logs": "find logs -name '*.log' -mtime +30 -delete"
   },
   "keywords": [
     "restaurant",

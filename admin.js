@@ -203,7 +203,7 @@ async function handleLogin(e) {
             localStorage.setItem('user', JSON.stringify(currentUser));
             
             showDashboard();
-            loadDashboardDataStatic();
+            loadDashboardData();
             showToast('Inicio de sesión exitoso', 'success');
         } else {
             throw new Error('Credenciales incorrectas. Intente con: admin@cafearoma.com / admin123');
@@ -268,6 +268,8 @@ function showSection(sectionName) {
         contacts: 'Mensajes de Contacto',
         employees: 'Gestión de Empleados',
         orders: 'Gestión de Pedidos y Cuentas',
+        reports: 'Reportes Avanzados',
+        backup: 'Backup y Restauración',
         analytics: 'Análisis y Reportes',
         settings: 'Configuración del Sistema'
     };
@@ -298,6 +300,12 @@ function showSection(sectionName) {
         case 'orders':
             loadOrdersSection();
             loadActiveTablesOverview();
+            break;
+        case 'reports':
+            loadReportsSection();
+            break;
+        case 'backup':
+            loadBackupSection();
             break;
         case 'analytics':
             loadAnalytics();
@@ -361,9 +369,9 @@ function togglePassword() {
 // ==========================================
 // DASHBOARD
 // ==========================================
-async function loadDashboardDataStatic() {
+async function loadDashboardData() {
     try {
-        // Datos estáticos para demo - completamente funcional sin backend
+        // Cargar datos reales desde la API backend
         const menuData = {
             success: true,
             data: [
@@ -4113,6 +4121,696 @@ function getRoleText(role) {
     return roleTexts[role] || role;
 }
 
+// ==========================================
+// SISTEMA DE REPORTES
+// ==========================================
+
+let currentReportType = 'sales';
+let currentReportPeriod = 'monthly';
+
+function loadReportsSection() {
+    console.log('Cargando sección de reportes...');
+    
+    // Configurar event listeners para los botones de tipo de reporte
+    const reportTypeButtons = document.querySelectorAll('.report-type-btn');
+    reportTypeButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            selectReportType(btn.dataset.type);
+        });
+    });
+    
+    // Configurar event listener para el selector de período
+    const periodSelector = document.getElementById('reportPeriod');
+    if (periodSelector) {
+        periodSelector.addEventListener('change', (e) => {
+            currentReportPeriod = e.target.value;
+            toggleCustomDateRange();
+            if (currentReportType) {
+                generateReport();
+            }
+        });
+    }
+    
+    // Configurar filtros de fecha personalizados
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
+    if (startDate && endDate) {
+        [startDate, endDate].forEach(input => {
+            input.addEventListener('change', () => {
+                if (currentReportPeriod === 'custom') {
+                    generateReport();
+                }
+            });
+        });
+    }
+    
+    // Generar reporte inicial
+    generateReport();
+}
+
+function selectReportType(type) {
+    currentReportType = type;
+    
+    // Actualizar botones activos
+    document.querySelectorAll('.report-type-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`[data-type="${type}"]`).classList.add('active');
+    
+    // Generar reporte
+    generateReport();
+}
+
+function toggleCustomDateRange() {
+    const customRange = document.getElementById('customDateRange');
+    if (customRange) {
+        customRange.style.display = currentReportPeriod === 'custom' ? 'flex' : 'none';
+    }
+}
+
+async function generateReport() {
+    const reportContent = document.getElementById('reportContent');
+    if (!reportContent) return;
+    
+    // Mostrar loading
+    reportContent.innerHTML = `
+        <div class="loading-message">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>Generando reporte de ${getReportTypeText(currentReportType)}...</p>
+        </div>
+    `;
+    
+    try {
+        let reportData;
+        
+        switch (currentReportType) {
+            case 'sales':
+                reportData = await generateSalesReport();
+                break;
+            case 'products':
+                reportData = await generateProductsReport();
+                break;
+            case 'employees':
+                reportData = await generateEmployeesReport();
+                break;
+            case 'tables':
+                reportData = await generateTablesReport();
+                break;
+            case 'hours':
+                reportData = await generateHoursReport();
+                break;
+            case 'financial':
+                reportData = await generateFinancialReport();
+                break;
+            default:
+                throw new Error('Tipo de reporte no válido');
+        }
+        
+        renderReport(reportData);
+        
+    } catch (error) {
+        console.error('Error generando reporte:', error);
+        reportContent.innerHTML = `
+            <div class="error-message">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Error generando reporte: ${error.message}</p>
+                <button class="btn btn-secondary" onclick="generateReport()">
+                    <i class="fas fa-retry"></i> Reintentar
+                </button>
+            </div>
+        `;
+    }
+}
+
+async function generateSalesReport() {
+    const params = getReportParams();
+    const response = await apiRequest(`/api/reports/sales?${params}`);
+    
+    if (!response.success) {
+        throw new Error(response.message || 'Error obteniendo reporte de ventas');
+    }
+    
+    return {
+        title: 'Reporte de Ventas',
+        type: 'sales',
+        data: response.data,
+        totals: response.totals,
+        period: response.period
+    };
+}
+
+async function generateProductsReport() {
+    const params = getReportParams();
+    const response = await apiRequest(`/api/reports/top-products?${params}&limit=20`);
+    
+    if (!response.success) {
+        throw new Error(response.message || 'Error obteniendo reporte de productos');
+    }
+    
+    return {
+        title: 'Productos Más Vendidos',
+        type: 'products',
+        data: response.data,
+        period: response.period
+    };
+}
+
+async function generateEmployeesReport() {
+    const params = getReportParams();
+    const response = await apiRequest(`/api/reports/employee-performance?${params}`);
+    
+    if (!response.success) {
+        throw new Error(response.message || 'Error obteniendo reporte de empleados');
+    }
+    
+    return {
+        title: 'Rendimiento de Empleados',
+        type: 'employees',
+        data: response.data,
+        period: response.period
+    };
+}
+
+async function generateTablesReport() {
+    const date = currentReportPeriod === 'custom' 
+        ? document.getElementById('startDate').value 
+        : new Date().toISOString().split('T')[0];
+    
+    const response = await apiRequest(`/api/reports/table-occupancy?date=${date}`);
+    
+    if (!response.success) {
+        throw new Error(response.message || 'Error obteniendo reporte de mesas');
+    }
+    
+    return {
+        title: 'Ocupación de Mesas',
+        type: 'tables',
+        data: response.data,
+        stats: response.stats,
+        date: response.date
+    };
+}
+
+async function generateHoursReport() {
+    const params = getReportParams();
+    const response = await apiRequest(`/api/reports/peak-hours?${params}`);
+    
+    if (!response.success) {
+        throw new Error(response.message || 'Error obteniendo reporte de horarios');
+    }
+    
+    return {
+        title: 'Horarios Pico',
+        type: 'hours',
+        data: response.data,
+        period: response.period,
+        peak_hour: response.peak_hour
+    };
+}
+
+async function generateFinancialReport() {
+    const params = getReportParams();
+    const response = await apiRequest(`/api/reports/financial-summary?${params}`);
+    
+    if (!response.success) {
+        throw new Error(response.message || 'Error obteniendo reporte financiero');
+    }
+    
+    return {
+        title: 'Resumen Financiero',
+        type: 'financial',
+        data: response.data,
+        period: response.period
+    };
+}
+
+function getReportParams() {
+    const params = new URLSearchParams();
+    params.append('period', currentReportPeriod);
+    
+    if (currentReportPeriod === 'custom') {
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+    }
+    
+    return params.toString();
+}
+
+function renderReport(reportData) {
+    const reportContent = document.getElementById('reportContent');
+    
+    let html = `
+        <div class="report-header">
+            <h3>${reportData.title}</h3>
+            <div class="report-meta">
+                <span class="report-period">Período: ${getReportPeriodText()}</span>
+                <span class="report-generated">Generado: ${new Date().toLocaleString('es-ES')}</span>
+            </div>
+        </div>
+    `;
+    
+    switch (reportData.type) {
+        case 'sales':
+            html += renderSalesReport(reportData);
+            break;
+        case 'products':
+            html += renderProductsReport(reportData);
+            break;
+        case 'employees':
+            html += renderEmployeesReport(reportData);
+            break;
+        case 'tables':
+            html += renderTablesReport(reportData);
+            break;
+        case 'hours':
+            html += renderHoursReport(reportData);
+            break;
+        case 'financial':
+            html += renderFinancialReport(reportData);
+            break;
+    }
+    
+    html += `
+        <div class="report-actions">
+            <button class="btn btn-primary" onclick="downloadReport('${reportData.type}')">
+                <i class="fas fa-download"></i> Descargar PDF
+            </button>
+            <button class="btn btn-secondary" onclick="printReport()">
+                <i class="fas fa-print"></i> Imprimir
+            </button>
+        </div>
+    `;
+    
+    reportContent.innerHTML = html;
+}
+
+function renderSalesReport(reportData) {
+    let html = '';
+    
+    if (reportData.totals) {
+        html += `
+            <div class="report-summary">
+                <div class="report-metric">
+                    <div class="report-metric-value">${reportData.totals.total_orders || 0}</div>
+                    <div class="report-metric-label">Pedidos Totales</div>
+                </div>
+                <div class="report-metric">
+                    <div class="report-metric-value">€${(reportData.totals.total_sales || 0).toFixed(2)}</div>
+                    <div class="report-metric-label">Ventas Totales</div>
+                </div>
+                <div class="report-metric">
+                    <div class="report-metric-value">€${((reportData.totals.total_sales || 0) / (reportData.totals.total_orders || 1)).toFixed(2)}</div>
+                    <div class="report-metric-label">Ticket Promedio</div>
+                </div>
+                <div class="report-metric">
+                    <div class="report-metric-value">${reportData.totals.unique_tables || 0}</div>
+                    <div class="report-metric-label">Mesas Atendidas</div>
+                </div>
+            </div>
+        `;
+    }
+    
+    if (reportData.data && reportData.data.length > 0) {
+        html += `
+            <div class="report-table-container">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Pedidos</th>
+                            <th>Ventas</th>
+                            <th>Ticket Promedio</th>
+                            <th>Mesas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        reportData.data.forEach(row => {
+            html += `
+                <tr>
+                    <td>${formatDate(row.date)}</td>
+                    <td>${row.total_orders || 0}</td>
+                    <td>€${(row.total_sales || 0).toFixed(2)}</td>
+                    <td>€${(row.average_order || 0).toFixed(2)}</td>
+                    <td>${row.unique_tables || 0}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } else {
+        html += '<p class="no-data">No hay datos disponibles para este período.</p>';
+    }
+    
+    return html;
+}
+
+function renderProductsReport(reportData) {
+    let html = '';
+    
+    if (reportData.data && reportData.data.length > 0) {
+        html += `
+            <div class="report-table-container">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Categoría</th>
+                            <th>Cantidad Vendida</th>
+                            <th>Ingresos</th>
+                            <th>Precio Promedio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        reportData.data.forEach(product => {
+            html += `
+                <tr>
+                    <td><strong>${product.name}</strong></td>
+                    <td><span class="category-badge">${product.category}</span></td>
+                    <td>${product.total_sold}</td>
+                    <td>€${(product.total_revenue || 0).toFixed(2)}</td>
+                    <td>€${(product.price || 0).toFixed(2)}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } else {
+        html += '<p class="no-data">No hay productos vendidos en este período.</p>';
+    }
+    
+    return html;
+}
+
+function renderEmployeesReport(reportData) {
+    let html = '';
+    
+    if (reportData.data && reportData.data.length > 0) {
+        html += `
+            <div class="report-table-container">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Empleado</th>
+                            <th>Posición</th>
+                            <th>Días Trabajados</th>
+                            <th>Horas Promedio/Día</th>
+                            <th>Pedidos Atendidos</th>
+                            <th>Ventas Generadas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        reportData.data.forEach(employee => {
+            html += `
+                <tr>
+                    <td><strong>${employee.name}</strong></td>
+                    <td><span class="position-badge">${getRoleText(employee.position)}</span></td>
+                    <td>${employee.days_worked || 0}</td>
+                    <td>${(employee.avg_hours_per_day || 0).toFixed(1)}h</td>
+                    <td>${employee.orders_served || 0}</td>
+                    <td>€${(employee.total_sales_generated || 0).toFixed(2)}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } else {
+        html += '<p class="no-data">No hay datos de empleados para este período.</p>';
+    }
+    
+    return html;
+}
+
+function renderTablesReport(reportData) {
+    let html = '';
+    
+    if (reportData.stats) {
+        html += `
+            <div class="report-summary">
+                <div class="report-metric">
+                    <div class="report-metric-value">${reportData.stats.total_tables_used || 0}</div>
+                    <div class="report-metric-label">Mesas Utilizadas</div>
+                </div>
+                <div class="report-metric">
+                    <div class="report-metric-value">€${(reportData.stats.total_revenue || 0).toFixed(2)}</div>
+                    <div class="report-metric-label">Ingresos Totales</div>
+                </div>
+                <div class="report-metric">
+                    <div class="report-metric-value">€${(reportData.stats.average_revenue_per_table || 0).toFixed(2)}</div>
+                    <div class="report-metric-label">Promedio por Mesa</div>
+                </div>
+                <div class="report-metric">
+                    <div class="report-metric-value">Mesa ${reportData.stats.busiest_table || 'N/A'}</div>
+                    <div class="report-metric-label">Mesa Más Activa</div>
+                </div>
+            </div>
+        `;
+    }
+    
+    if (reportData.data && reportData.data.length > 0) {
+        html += `
+            <div class="report-table-container">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Mesa</th>
+                            <th>Pedidos</th>
+                            <th>Ingresos</th>
+                            <th>Ticket Promedio</th>
+                            <th>Primer Pedido</th>
+                            <th>Último Pedido</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        reportData.data.forEach(table => {
+            html += `
+                <tr>
+                    <td><strong>Mesa ${table.table_number}</strong></td>
+                    <td>${table.total_orders}</td>
+                    <td>€${(table.total_revenue || 0).toFixed(2)}</td>
+                    <td>€${(table.average_order || 0).toFixed(2)}</td>
+                    <td>${formatTime(table.first_order)}</td>
+                    <td>${formatTime(table.last_order)}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } else {
+        html += '<p class="no-data">No hay datos de mesas para esta fecha.</p>';
+    }
+    
+    return html;
+}
+
+function renderHoursReport(reportData) {
+    let html = '';
+    
+    if (reportData.peak_hour) {
+        html += `
+            <div class="report-summary">
+                <div class="report-metric">
+                    <div class="report-metric-value">${reportData.peak_hour}</div>
+                    <div class="report-metric-label">Hora Pico</div>
+                </div>
+            </div>
+        `;
+    }
+    
+    if (reportData.data && reportData.data.length > 0) {
+        html += `
+            <div class="report-table-container">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Hora</th>
+                            <th>Pedidos</th>
+                            <th>Ventas</th>
+                            <th>Ticket Promedio</th>
+                            <th>Mesas Activas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        reportData.data.forEach(hour => {
+            html += `
+                <tr>
+                    <td><strong>${hour.hour_formatted || hour.hour_12}</strong></td>
+                    <td>${hour.order_count}</td>
+                    <td>€${(hour.total_sales || 0).toFixed(2)}</td>
+                    <td>€${(hour.average_order || 0).toFixed(2)}</td>
+                    <td>${hour.active_tables}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } else {
+        html += '<p class="no-data">No hay datos de horarios para este período.</p>';
+    }
+    
+    return html;
+}
+
+function renderFinancialReport(reportData) {
+    let html = '';
+    
+    if (reportData.data && reportData.data.totalSales) {
+        const totals = reportData.data.totalSales;
+        
+        html += `
+            <div class="report-summary">
+                <div class="report-metric">
+                    <div class="report-metric-value">${totals.total_orders || 0}</div>
+                    <div class="report-metric-label">Pedidos Totales</div>
+                </div>
+                <div class="report-metric">
+                    <div class="report-metric-value">€${(totals.gross_sales || 0).toFixed(2)}</div>
+                    <div class="report-metric-label">Ventas Brutas</div>
+                </div>
+                <div class="report-metric">
+                    <div class="report-metric-value">€${(totals.average_order_value || 0).toFixed(2)}</div>
+                    <div class="report-metric-label">Ticket Promedio</div>
+                </div>
+                <div class="report-metric">
+                    <div class="report-metric-value">${totals.tables_served || 0}</div>
+                    <div class="report-metric-label">Mesas Atendidas</div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Mostrar breakdown por categorías si está disponible
+    if (reportData.data && reportData.data.categoryBreakdown) {
+        html += `
+            <h4>Ventas por Categoría</h4>
+            <div class="report-table-container">
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Categoría</th>
+                            <th>Items Vendidos</th>
+                            <th>Ingresos</th>
+                            <th>Precio Promedio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        reportData.data.categoryBreakdown.forEach(category => {
+            html += `
+                <tr>
+                    <td><span class="category-badge">${category.category}</span></td>
+                    <td>${category.items_sold}</td>
+                    <td>€${(category.category_revenue || 0).toFixed(2)}</td>
+                    <td>€${(category.avg_price || 0).toFixed(2)}</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+    
+    return html;
+}
+
+function getReportTypeText(type) {
+    const texts = {
+        sales: 'ventas',
+        products: 'productos',
+        employees: 'empleados',
+        tables: 'mesas',
+        hours: 'horarios',
+        financial: 'financiero'
+    };
+    return texts[type] || type;
+}
+
+function getReportPeriodText() {
+    switch (currentReportPeriod) {
+        case 'daily': return 'Hoy';
+        case 'weekly': return 'Esta semana';
+        case 'monthly': return 'Este mes';
+        case 'custom': 
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            return startDate && endDate ? `${formatDate(startDate)} - ${formatDate(endDate)}` : 'Personalizado';
+        default: return currentReportPeriod;
+    }
+}
+
+function downloadReport(type) {
+    showToast('Función de descarga en desarrollo', 'info');
+}
+
+function printReport() {
+    const reportContent = document.getElementById('reportContent');
+    if (!reportContent) return;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Reporte - Café Aroma</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .report-header h3 { color: #8b4513; }
+                .report-summary { display: flex; gap: 20px; margin: 20px 0; }
+                .report-metric { text-align: center; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+                .report-metric-value { font-size: 24px; font-weight: bold; color: #8b4513; }
+                .report-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                .report-table th, .report-table td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+                .report-table th { background: #f5f5f5; font-weight: bold; }
+                .category-badge, .position-badge { background: #8b4513; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+                @media print { .report-actions { display: none; } }
+            </style>
+        </head>
+        <body>
+            ${reportContent.innerHTML.replace(/<button[^>]*>.*?<\/button>/gi, '')}
+        </body>
+        </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+}
+
 function formatTime(dateTimeString) {
     if (!dateTimeString) return 'N/A';
     
@@ -4121,4 +4819,274 @@ function formatTime(dateTimeString) {
         hour: '2-digit',
         minute: '2-digit'
     });
+}
+
+// ==========================================
+// SISTEMA DE BACKUP
+// ==========================================
+
+let backupConfig = {
+    frequency: 'daily',
+    time: '02:00',
+    max_backups: 7,
+    enabled: false
+};
+
+function loadBackupSection() {
+    console.log('Cargando sección de backup...');
+    
+    // Cargar configuración actual
+    loadBackupConfig();
+    
+    // Cargar lista de backups
+    loadBackupsList();
+    
+    // Configurar event listeners
+    setupBackupEventListeners();
+}
+
+async function loadBackupConfig() {
+    try {
+        const response = await apiRequest('/api/backup/schedule');
+        
+        if (response.success && response.config) {
+            backupConfig = response.config;
+            
+            // Actualizar la interfaz con la configuración
+            document.getElementById('backupFrequency').value = backupConfig.frequency;
+            document.getElementById('backupTime').value = backupConfig.time;
+            document.getElementById('maxBackups').value = backupConfig.max_backups;
+        }
+    } catch (error) {
+        console.error('Error cargando configuración de backup:', error);
+        showToast('Error cargando configuración de backup', 'error');
+    }
+}
+
+async function loadBackupsList() {
+    const backupsList = document.getElementById('backupsList');
+    if (!backupsList) return;
+    
+    try {
+        backupsList.innerHTML = `
+            <div class="loading-message">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Cargando backups...</p>
+            </div>
+        `;
+        
+        const response = await apiRequest('/api/backup/list');
+        
+        if (response.success) {
+            renderBackupsList(response.backups);
+        } else {
+            throw new Error(response.message || 'Error cargando lista de backups');
+        }
+    } catch (error) {
+        console.error('Error cargando backups:', error);
+        backupsList.innerHTML = `
+            <div class="error-message">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Error cargando backups: ${error.message}</p>
+                <button class="btn btn-secondary" onclick="loadBackupsList()">
+                    <i class="fas fa-retry"></i> Reintentar
+                </button>
+            </div>
+        `;
+    }
+}
+
+function renderBackupsList(backups) {
+    const backupsList = document.getElementById('backupsList');
+    if (!backups || backups.length === 0) {
+        backupsList.innerHTML = `
+            <div class="no-data">
+                <i class="fas fa-database"></i>
+                <p>No hay backups disponibles</p>
+                <button class="btn btn-primary" onclick="createBackup()">
+                    <i class="fas fa-plus"></i> Crear Primer Backup
+                </button>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '';
+    
+    backups.forEach(backup => {
+        const size = formatFileSize(backup.size);
+        const date = new Date(backup.created_at).toLocaleString('es-ES');
+        const type = backup.type === 'manual' ? 'Manual' : 'Automático';
+        
+        html += `
+            <div class="backup-item">
+                <div class="backup-info">
+                    <div class="backup-name">${backup.filename}</div>
+                    <div class="backup-details">
+                        <span><i class="fas fa-calendar"></i> ${date}</span>
+                        <span><i class="fas fa-tag"></i> ${type}</span>
+                        <span class="backup-size">${size}</span>
+                    </div>
+                </div>
+                <div class="backup-actions">
+                    <button class="backup-btn download" onclick="downloadBackup('${backup.filename}')" title="Descargar">
+                        <i class="fas fa-download"></i>
+                        Descargar
+                    </button>
+                    <button class="backup-btn restore" onclick="restoreBackup('${backup.filename}')" title="Restaurar">
+                        <i class="fas fa-undo"></i>
+                        Restaurar
+                    </button>
+                    <button class="backup-btn delete" onclick="deleteBackup('${backup.filename}')" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    backupsList.innerHTML = html;
+}
+
+function setupBackupEventListeners() {
+    // Botón guardar configuración
+    const saveConfigBtn = document.querySelector('button[onclick="saveBackupConfig()"]');
+    if (saveConfigBtn) {
+        saveConfigBtn.onclick = saveBackupConfig;
+    }
+}
+
+async function createBackup() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    
+    try {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creando...';
+        btn.disabled = true;
+        
+        const response = await apiRequest('/api/backup/create', {
+            method: 'POST'
+        });
+        
+        if (response.success) {
+            showToast('Backup creado exitosamente', 'success');
+            loadBackupsList(); // Recargar lista
+        } else {
+            throw new Error(response.message || 'Error creando backup');
+        }
+    } catch (error) {
+        console.error('Error creando backup:', error);
+        showToast('Error creando backup: ' + error.message, 'error');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+async function saveBackupConfig() {
+    const frequency = document.getElementById('backupFrequency').value;
+    const time = document.getElementById('backupTime').value;
+    const maxBackups = parseInt(document.getElementById('maxBackups').value);
+    
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    
+    try {
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+        btn.disabled = true;
+        
+        const response = await apiRequest('/api/backup/schedule', {
+            method: 'POST',
+            body: {
+                frequency,
+                time,
+                max_backups: maxBackups
+            }
+        });
+        
+        if (response.success) {
+            backupConfig = response.config;
+            showToast('Configuración de backup guardada', 'success');
+        } else {
+            throw new Error(response.message || 'Error guardando configuración');
+        }
+    } catch (error) {
+        console.error('Error guardando configuración:', error);
+        showToast('Error guardando configuración: ' + error.message, 'error');
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+function downloadBackup(filename) {
+    const downloadUrl = `/api/backup/download/${filename}`;
+    
+    // Crear enlace temporal para descarga
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showToast('Descarga iniciada', 'info');
+}
+
+async function restoreBackup(filename) {
+    const confirmed = confirm(`¿Está seguro de que desea restaurar el backup "${filename}"?\n\nEsta acción reemplazará todos los datos actuales.`);
+    
+    if (!confirmed) return;
+    
+    try {
+        const response = await apiRequest(`/api/backup/restore/${filename}`, {
+            method: 'POST'
+        });
+        
+        if (response.success) {
+            showToast('Backup restaurado exitosamente. Reiniciando aplicación...', 'success');
+            
+            // Recargar la página después de 3 segundos
+            setTimeout(() => {
+                window.location.reload();
+            }, 3000);
+        } else {
+            throw new Error(response.message || 'Error restaurando backup');
+        }
+    } catch (error) {
+        console.error('Error restaurando backup:', error);
+        showToast('Error restaurando backup: ' + error.message, 'error');
+    }
+}
+
+async function deleteBackup(filename) {
+    const confirmed = confirm(`¿Está seguro de que desea eliminar el backup "${filename}"?\n\nEsta acción no se puede deshacer.`);
+    
+    if (!confirmed) return;
+    
+    try {
+        const response = await apiRequest(`/api/backup/delete/${filename}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.success) {
+            showToast('Backup eliminado exitosamente', 'success');
+            loadBackupsList(); // Recargar lista
+        } else {
+            throw new Error(response.message || 'Error eliminando backup');
+        }
+    } catch (error) {
+        console.error('Error eliminando backup:', error);
+        showToast('Error eliminando backup: ' + error.message, 'error');
+    }
+}
+
+function formatFileSize(bytes) {
+    if (!bytes) return '0 B';
+    
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    
+    return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
 }

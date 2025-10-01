@@ -1,3 +1,4 @@
+// Servidor simplificado para desarrollo y testing
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -8,29 +9,25 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+// Middleware básico
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Servir archivos estáticos (frontend)
+// Servir archivos estáticos
 app.use(express.static(path.join(__dirname)));
 
 // Inicializar sistema de notificaciones
-const NotificationServer = require('./backend/services/notificationService');
-const notificationServer = new NotificationServer(server);
+try {
+    const NotificationServer = require('./backend/services/notificationService');
+    const notificationServer = new NotificationServer(server);
+    app.set('notificationServer', notificationServer);
+    console.log('🔌 Servidor WebSocket iniciado en /ws');
+} catch (error) {
+    console.warn('⚠️ WebSocket no disponible:', error.message);
+}
 
-// Routes
-// Inicializar logger y seguridad
-const logger = require('./backend/utils/logger');
-const security = require('./backend/config/security');
-
-// Middleware de seguridad
-app.use(logger.requestLogger());
-app.use(security.securityLogger);
-app.use(security.sanitizeInput);
-
-// Routes
+// Routes básicas
 const reservationsRouter = require('./backend/routes/reservations');
 const contactRouter = require('./backend/routes/contact');
 const authRouter = require('./backend/routes/auth');
@@ -40,13 +37,6 @@ const employeesRouter = require('./backend/routes/employees');
 const ordersRouter = require('./backend/routes/orders');
 const reportsRouter = require('./backend/routes/reports');
 const backupRouter = require('./backend/routes/backup');
-
-// Rate limiting por rutas
-app.use('/api/auth', security.rateLimits.auth);
-app.use('/api/reservations', security.rateLimits.reservations);
-app.use('/api/contact', security.rateLimits.contact);
-app.use('/api/email', security.rateLimits.email);
-app.use('/api', security.rateLimits.general);
 
 // Rutas de API
 app.use('/api/reservations', reservationsRouter);
@@ -70,22 +60,24 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Hacer el servidor de notificaciones disponible globalmente
-app.set('notificationServer', notificationServer);
-
-// Ruta principal para servir la página web
+// Ruta principal
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Ruta para el panel de administración
+// Ruta admin
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
+// Ruta empleados
+app.get('/employee', (req, res) => {
+    res.sendFile(path.join(__dirname, 'employee.html'));
+});
+
 // Manejo de errores
 app.use((err, req, res, next) => {
-    console.error(err.stack);
+    console.error('Error del servidor:', err);
     res.status(500).json({ 
         success: false, 
         message: 'Error interno del servidor' 
@@ -94,16 +86,20 @@ app.use((err, req, res, next) => {
 
 // Ruta 404
 app.use('*', (req, res) => {
-    res.status(404).json({ 
-        success: false, 
-        message: 'Ruta no encontrada' 
-    });
+    if (req.originalUrl.startsWith('/api/')) {
+        res.status(404).json({ 
+            success: false, 
+            message: 'Endpoint no encontrado' 
+        });
+    } else {
+        res.sendFile(path.join(__dirname, 'index.html'));
+    }
 });
 
 server.listen(PORT, () => {
     console.log(`🍃 Servidor Café Aroma ejecutándose en http://localhost:${PORT}`);
     console.log(`📊 Panel admin disponible en http://localhost:${PORT}/admin`);
-    console.log(`🔌 WebSocket servidor iniciado en ws://localhost:${PORT}/ws`);
+    console.log(`👥 Panel empleados disponible en http://localhost:${PORT}/employee`);
 });
 
 module.exports = app;
