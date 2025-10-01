@@ -100,6 +100,10 @@
                 <i class="fas fa-utensils"></i>
                 Cocina
             </button>
+            <button class="nav-btn" data-section="bills">
+                <i class="fas fa-receipt"></i>
+                Cuentas
+            </button>
             <button class="nav-btn" data-section="history">
                 <i class="fas fa-history"></i>
                 Historial
@@ -167,8 +171,8 @@
                         <input type="number" id="tableNumber" min="1" max="50" required>
                     </div>
                     <div class="form-group">
-                        <label for="customerName">Cliente (opcional)</label>
-                        <input type="text" id="customerName" placeholder="Nombre del cliente">
+                        <label for="customerName">Cliente *</label>
+                        <input type="text" id="customerName" placeholder="Nombre del cliente" required>
                     </div>
                 </div>
                 
@@ -300,6 +304,80 @@
             
             <div id="kitchenOrders" class="kitchen-orders">
                 <!-- Pedidos se cargan dinámicamente -->
+            </div>
+        </section>
+
+        <!-- Sección de Cuentas/Mesas -->
+        <section id="billsSection" class="content-section">
+            <div class="section-header">
+                <h2><i class="fas fa-receipt"></i> Gestión de Cuentas</h2>
+                <button class="refresh-btn" onclick="refreshBills()">
+                    <i class="fas fa-sync-alt"></i> Actualizar
+                </button>
+            </div>
+
+            <!-- Estadísticas de mesas -->
+            <div class="bills-stats">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-table"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-number" id="activeTables">0</span>
+                            <span class="stat-label">Mesas Activas</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-euro-sign"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-number" id="totalPending">€0.00</span>
+                            <span class="stat-label">Total Pendiente</span>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-number" id="tablesReady">0</span>
+                            <span class="stat-label">Listas para Cobrar</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vista de mesas -->
+            <div class="employee-tables-grid" id="employeeTablesGrid">
+                <!-- Se llena dinámicamente -->
+            </div>
+
+            <!-- Modal para ver cuenta de mesa -->
+            <div id="employeeBillModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 id="employeeBillTitle">Cuenta de Mesa</h3>
+                        <span class="modal-close" onclick="closeEmployeeBillModal()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div id="employeeBillDetails">
+                            <!-- Detalles de la cuenta -->
+                        </div>
+                        <div class="bill-actions">
+                            <button class="btn btn-warning" onclick="requestBillPrint()">
+                                <i class="fas fa-print"></i> Solicitar Impresión
+                            </button>
+                            <button class="btn btn-success" onclick="markTableAsReady()">
+                                <i class="fas fa-check"></i> Mesa Lista para Cobrar
+                            </button>
+                            <button class="btn btn-secondary" onclick="closeEmployeeBillModal()">
+                                <i class="fas fa-times"></i> Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 

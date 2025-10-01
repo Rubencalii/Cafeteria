@@ -89,6 +89,21 @@ function setupEventListeners() {
         });
     }
     
+    // Filtros de pedidos
+    const orderStatusFilter = document.getElementById('orderStatusFilter');
+    if (orderStatusFilter) {
+        orderStatusFilter.addEventListener('change', () => {
+            loadOrdersSection();
+        });
+    }
+    
+    const orderTableFilter = document.getElementById('orderTableFilter');
+    if (orderTableFilter) {
+        orderTableFilter.addEventListener('change', () => {
+            loadOrdersSection();
+        });
+    }
+    
     // Forms
     const menuItemForm = document.getElementById('menuItemForm');
     if (menuItemForm) {
@@ -126,6 +141,9 @@ function setupEventListeners() {
                 loadContacts();
             } else if (sectionId === 'employeesSection') {
                 loadEmployeeTimeEntries();
+            } else if (sectionId === 'ordersSection') {
+                loadOrdersSection();
+                loadActiveTablesOverview();
             }
         }
     }, 5000); // Actualizar cada 5 segundos
@@ -250,6 +268,7 @@ function showSection(sectionName) {
         menu: 'Gestión del Menú',
         contacts: 'Mensajes de Contacto',
         employees: 'Gestión de Empleados',
+        orders: 'Gestión de Pedidos y Cuentas',
         analytics: 'Análisis y Reportes',
         settings: 'Configuración del Sistema'
     };
@@ -276,6 +295,10 @@ function showSection(sectionName) {
         case 'employees':
             loadEmployeesSection();
             loadEmployeeTimeEntries();
+            break;
+        case 'orders':
+            loadOrdersSection();
+            loadActiveTablesOverview();
             break;
         case 'analytics':
             loadAnalytics();
@@ -1309,6 +1332,602 @@ function refreshEmployees() {
     loadEmployeesSection();
     loadEmployeeTimeEntries();
     showNotification('Empleados actualizados', 'success');
+}
+
+// ==========================================
+// GESTIÓN DE PEDIDOS Y CUENTAS
+// ==========================================
+
+let currentBill = null;
+
+async function loadOrdersSection() {
+    try {
+        showLoading(true);
+        
+        // Cargar pedidos desde localStorage
+        const savedOrders = JSON.parse(localStorage.getItem('kitchenOrders') || '[]');
+        
+        // Combinar con datos del servidor si están disponibles
+        let allOrders = savedOrders;
+        
+        try {
+            const response = await fetch('/api/orders', {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.data) {
+                    // Combinar datos del servidor con localStorage
+                    allOrders = [...result.data, ...savedOrders];
+                }
+            }
+        } catch (serverError) {
+            console.log('Servidor no disponible, usando datos locales');
+        }
+        
+        // Mostrar estadísticas
+        updateOrdersStats(allOrders);
+        
+        // Mostrar tabla de pedidos
+        displayOrders(allOrders);
+        
+        console.log(`✅ Cargados ${allOrders.length} pedidos`);
+        
+    } catch (error) {
+        console.error('❌ Error cargando pedidos:', error);
+        showNotification('Error cargando pedidos: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+function updateOrdersStats(orders) {
+    const today = new Date();
+    const todayOrders = orders.filter(order => {
+        const orderDate = new Date(order.created_at);
+        return orderDate.toDateString() === today.toDateString();
+    });
+    
+    const totalRevenue = todayOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+    const pendingOrders = todayOrders.filter(o => ['pending', 'preparing'].includes(o.status)).length;
+    const completedOrders = todayOrders.filter(o => ['served', 'paid'].includes(o.status)).length;
+    
+    // Actualizar estadísticas en la interfaz
+    document.getElementById('totalOrders').textContent = todayOrders.length;
+    document.getElementById('totalRevenue').textContent = `€${totalRevenue.toFixed(2)}`;
+    document.getElementById('pendingOrders').textContent = pendingOrders;
+    document.getElementById('completedOrders').textContent = completedOrders;
+}
+
+function displayOrders(orders) {
+    const tbody = document.getElementById('ordersTableBody');
+    
+    if (!orders || orders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No hay pedidos registrados</td></tr>';
+        return;
+    }
+    
+    // Filtrar por estado y mesa si se especifica
+    let filteredOrders = orders;
+    
+    const statusFilter = document.getElementById('orderStatusFilter')?.value;
+    if (statusFilter && statusFilter !== 'all') {
+        filteredOrders = filteredOrders.filter(o => o.status === statusFilter);
+    }
+    
+    const tableFilter = document.getElementById('orderTableFilter')?.value;
+    if (tableFilter && tableFilter !== 'all') {
+        filteredOrders = filteredOrders.filter(o => o.table_number == tableFilter);
+    }
+    
+    // Ordenar por fecha más reciente
+    filteredOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
+    tbody.innerHTML = filteredOrders.map(order => `
+        <tr class="order-row ${order.status}">
+            <td>#${order.id}</td>
+            <td class="table-cell">
+                <span class="table-number">Mesa ${order.table_number || 'N/A'}</span>
+            </td>
+            <td>
+                <strong>${order.customer_name || 'Cliente'}</strong>
+                <br><small>${order.employee_name || 'Empleado'}</small>
+            </td>
+            <td class="items-cell">
+                <span class="items-count">${order.items?.length || 0} items</span>
+                <small class="items-preview">${getItemsPreview(order.items)}</small>
+            </td>
+            <td class="amount-cell">
+                <strong>€${(order.total_amount || 0).toFixed(2)}</strong>
+            </td>
+            <td>
+                <span class="status-badge status-${order.status}">
+                    ${getOrderStatusText(order.status)}
+                </span>
+            </td>
+            <td class="time-cell">
+                ${formatDateTime(order.created_at)}
+            </td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn-icon view" onclick="viewOrderDetails(${order.id})" title="Ver detalles">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn-icon bill" onclick="generateBill(${order.id})" title="Generar cuenta">
+                        <i class="fas fa-receipt"></i>
+                    </button>
+                    <button class="btn-icon edit" onclick="updateOrderStatus(${order.id})" title="Cambiar estado">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function getItemsPreview(items) {
+    if (!items || items.length === 0) return 'Sin items';
+    
+    const preview = items.slice(0, 2).map(item => 
+        `${item.quantity}x ${item.name}`
+    ).join(', ');
+    
+    return items.length > 2 ? `${preview}...` : preview;
+}
+
+function getOrderStatusText(status) {
+    const statusTexts = {
+        'pending': 'Pendiente',
+        'preparing': 'Preparando',
+        'ready': 'Listo',
+        'served': 'Servido',
+        'paid': 'Pagado',
+        'cancelled': 'Cancelado'
+    };
+    return statusTexts[status] || status;
+}
+
+async function loadActiveTablesOverview() {
+    try {
+        const orders = JSON.parse(localStorage.getItem('kitchenOrders') || '[]');
+        const activeOrders = orders.filter(o => !['paid', 'cancelled'].includes(o.status));
+        
+        // Agrupar por mesa
+        const tableOrders = {};
+        activeOrders.forEach(order => {
+            const tableNum = order.table_number || 0;
+            if (!tableOrders[tableNum]) {
+                tableOrders[tableNum] = {
+                    orders: [],
+                    totalAmount: 0,
+                    totalItems: 0
+                };
+            }
+            tableOrders[tableNum].orders.push(order);
+            tableOrders[tableNum].totalAmount += order.total_amount || 0;
+            tableOrders[tableNum].totalItems += order.items?.length || 0;
+        });
+        
+        displayActiveTablesGrid(tableOrders);
+        
+    } catch (error) {
+        console.error('Error cargando mesas activas:', error);
+    }
+}
+
+function displayActiveTablesGrid(tableOrders) {
+    const grid = document.getElementById('activeTablesGrid');
+    
+    if (Object.keys(tableOrders).length === 0) {
+        grid.innerHTML = '<div class="no-tables">No hay mesas activas</div>';
+        return;
+    }
+    
+    grid.innerHTML = Object.entries(tableOrders).map(([tableNum, data]) => `
+        <div class="table-card ${data.orders.some(o => o.status === 'ready') ? 'ready' : 'active'}">
+            <div class="table-header">
+                <h4>Mesa ${tableNum}</h4>
+                <span class="table-status">
+                    ${data.orders.length} pedido${data.orders.length > 1 ? 's' : ''}
+                </span>
+            </div>
+            <div class="table-details">
+                <p><strong>Total: €${data.totalAmount.toFixed(2)}</strong></p>
+                <p>${data.totalItems} items</p>
+                <p>Estado: ${getMostRecentStatus(data.orders)}</p>
+            </div>
+            <div class="table-actions">
+                <button class="btn btn-sm btn-primary" onclick="generateTableBill(${tableNum})">
+                    <i class="fas fa-receipt"></i> Cuenta
+                </button>
+                <button class="btn btn-sm btn-secondary" onclick="viewTableOrders(${tableNum})">
+                    <i class="fas fa-eye"></i> Ver
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function getMostRecentStatus(orders) {
+    const latestOrder = orders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+    return getOrderStatusText(latestOrder.status);
+}
+
+async function generateTableBill(tableNumber) {
+    try {
+        const orders = JSON.parse(localStorage.getItem('kitchenOrders') || '[]');
+        const tableOrders = orders.filter(o => 
+            o.table_number == tableNumber && !['paid', 'cancelled'].includes(o.status)
+        );
+        
+        if (tableOrders.length === 0) {
+            showNotification('No hay pedidos activos para esta mesa', 'warning');
+            return;
+        }
+        
+        // Consolidar items de todos los pedidos de la mesa
+        const allItems = [];
+        let totalAmount = 0;
+        
+        tableOrders.forEach(order => {
+            if (order.items) {
+                order.items.forEach(item => {
+                    const existingItem = allItems.find(i => i.name === item.name);
+                    if (existingItem) {
+                        existingItem.quantity += item.quantity;
+                        existingItem.total += item.total;
+                    } else {
+                        allItems.push({...item});
+                    }
+                });
+            }
+            totalAmount += order.total_amount || 0;
+        });
+        
+        currentBill = {
+            tableNumber,
+            orders: tableOrders,
+            items: allItems,
+            totalAmount,
+            timestamp: new Date().toISOString()
+        };
+        
+        showBillModal();
+        
+    } catch (error) {
+        console.error('Error generando cuenta:', error);
+        showNotification('Error generando la cuenta', 'error');
+    }
+}
+
+function showBillModal() {
+    if (!currentBill) return;
+    
+    const modal = document.getElementById('billModal');
+    const title = document.getElementById('billModalTitle');
+    const details = document.getElementById('billDetails');
+    
+    title.textContent = `Cuenta Mesa ${currentBill.tableNumber}`;
+    
+    details.innerHTML = `
+        <div class="bill-header">
+            <h3>☕ Café Aroma</h3>
+            <p>Mesa: ${currentBill.tableNumber}</p>
+            <p>Fecha: ${formatDateTime(currentBill.timestamp)}</p>
+            <p>Pedidos: ${currentBill.orders.length}</p>
+        </div>
+        
+        <div class="bill-items">
+            <h4>Detalle de la Cuenta</h4>
+            <table class="bill-table">
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Cant.</th>
+                        <th>Precio</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${currentBill.items.map(item => `
+                        <tr>
+                            <td>${item.name}</td>
+                            <td>${item.quantity}</td>
+                            <td>€${item.price.toFixed(2)}</td>
+                            <td>€${item.total.toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+                <tfoot>
+                    <tr class="bill-total">
+                        <td colspan="3"><strong>TOTAL</strong></td>
+                        <td><strong>€${currentBill.totalAmount.toFixed(2)}</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    `;
+    
+    showModal('billModal');
+}
+
+async function markAsPaid() {
+    if (!currentBill) return;
+    
+    try {
+        // Marcar todos los pedidos de la mesa como pagados
+        const orders = JSON.parse(localStorage.getItem('kitchenOrders') || '[]');
+        
+        currentBill.orders.forEach(billOrder => {
+            const orderIndex = orders.findIndex(o => o.id === billOrder.id);
+            if (orderIndex !== -1) {
+                orders[orderIndex].status = 'paid';
+                orders[orderIndex].paid_at = new Date().toISOString();
+            }
+        });
+        
+        localStorage.setItem('kitchenOrders', JSON.stringify(orders));
+        
+        // Registrar el pago
+        const payments = JSON.parse(localStorage.getItem('payments') || '[]');
+        payments.unshift({
+            id: Date.now(),
+            tableNumber: currentBill.tableNumber,
+            amount: currentBill.totalAmount,
+            items: currentBill.items,
+            orders: currentBill.orders.map(o => o.id),
+            timestamp: new Date().toISOString(),
+            method: 'cash' // Por defecto efectivo
+        });
+        localStorage.setItem('payments', JSON.stringify(payments));
+        
+        showNotification(`Cuenta de Mesa ${currentBill.tableNumber} marcada como pagada - €${currentBill.totalAmount.toFixed(2)}`, 'success');
+        
+        closeModal('billModal');
+        currentBill = null;
+        
+        // Recargar secciones
+        loadOrdersSection();
+        loadActiveTablesOverview();
+        
+    } catch (error) {
+        console.error('Error marcando como pagado:', error);
+        showNotification('Error procesando el pago', 'error');
+    }
+}
+
+function printBill() {
+    if (!currentBill) return;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Cuenta Mesa ${currentBill.tableNumber}</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                h1, h2 { text-align: center; margin: 10px 0; }
+                table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                th { background-color: #f2f2f2; }
+                .total { font-weight: bold; font-size: 1.2em; }
+                .header { text-align: center; margin-bottom: 20px; }
+                .footer { text-align: center; margin-top: 20px; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>☕ Café Aroma</h1>
+                <p>Mesa: ${currentBill.tableNumber}</p>
+                <p>Fecha: ${formatDateTime(currentBill.timestamp)}</p>
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Cantidad</th>
+                        <th>Precio</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${currentBill.items.map(item => `
+                        <tr>
+                            <td>${item.name}</td>
+                            <td>${item.quantity}</td>
+                            <td>€${item.price.toFixed(2)}</td>
+                            <td>€${item.total.toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+                <tfoot>
+                    <tr class="total">
+                        <td colspan="3">TOTAL</td>
+                        <td>€${currentBill.totalAmount.toFixed(2)}</td>
+                    </tr>
+                </tfoot>
+            </table>
+            
+            <div class="footer">
+                <p>¡Gracias por su visita!</p>
+                <p>Café Aroma - Su lugar especial</p>
+            </div>
+        </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.print();
+}
+
+function refreshOrders() {
+    loadOrdersSection();
+    loadActiveTablesOverview();
+    showNotification('Pedidos actualizados', 'success');
+}
+
+async function viewOrderDetails(orderId) {
+    const orders = JSON.parse(localStorage.getItem('kitchenOrders') || '[]');
+    const order = orders.find(o => o.id === orderId);
+    
+    if (!order) {
+        showNotification('Pedido no encontrado', 'error');
+        return;
+    }
+    
+    // Crear modal para mostrar detalles
+    const modal = document.createElement('div');
+    modal.className = 'order-details-modal-overlay';
+    modal.innerHTML = `
+        <div class="order-details-modal-content">
+            <div class="order-details-header">
+                <h3>📋 Detalles del Pedido #${order.id}</h3>
+                <button onclick="closeOrderDetailsModal()" class="close-btn">&times;</button>
+            </div>
+            <div class="order-details-body">
+                <div class="order-info">
+                    <p><strong>Mesa:</strong> ${order.table_number || 'N/A'}</p>
+                    <p><strong>Cliente:</strong> ${order.customer_name || 'No especificado'}</p>
+                    <p><strong>Empleado:</strong> ${order.employee_name || 'No especificado'}</p>
+                    <p><strong>Estado:</strong> <span class="status-badge status-${order.status}">${getOrderStatusText(order.status)}</span></p>
+                    <p><strong>Fecha:</strong> ${formatDateTime(order.created_at)}</p>
+                    <p><strong>Total:</strong> <strong>€${(order.total_amount || 0).toFixed(2)}</strong></p>
+                </div>
+                
+                <div class="order-items">
+                    <h4>Items del Pedido</h4>
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Cantidad</th>
+                                <th>Precio</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${(order.items || []).map(item => `
+                                <tr>
+                                    <td>${item.name}</td>
+                                    <td>${item.quantity}</td>
+                                    <td>€${item.price.toFixed(2)}</td>
+                                    <td>€${item.total.toFixed(2)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                
+                ${order.notes ? `
+                    <div class="order-notes">
+                        <h4>Notas:</h4>
+                        <p>${order.notes}</p>
+                    </div>
+                ` : ''}
+            </div>
+            <div class="order-details-actions">
+                <button onclick="updateOrderStatus(${order.id})" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Cambiar Estado
+                </button>
+                <button onclick="generateBill(${order.id})" class="btn btn-success">
+                    <i class="fas fa-receipt"></i> Generar Cuenta
+                </button>
+                <button onclick="closeOrderDetailsModal()" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function closeOrderDetailsModal() {
+    const modal = document.querySelector('.order-details-modal-overlay');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+async function updateOrderStatus(orderId) {
+    const orders = JSON.parse(localStorage.getItem('kitchenOrders') || '[]');
+    const orderIndex = orders.findIndex(o => o.id === orderId);
+    
+    if (orderIndex === -1) {
+        showNotification('Pedido no encontrado', 'error');
+        return;
+    }
+    
+    const currentStatus = orders[orderIndex].status;
+    const statusOptions = [
+        { value: 'pending', text: 'Pendiente' },
+        { value: 'preparing', text: 'Preparando' },
+        { value: 'ready', text: 'Listo' },
+        { value: 'served', text: 'Servido' },
+        { value: 'paid', text: 'Pagado' },
+        { value: 'cancelled', text: 'Cancelado' }
+    ];
+    
+    const newStatus = prompt(
+        `Estado actual: ${getOrderStatusText(currentStatus)}\n\nSeleccione nuevo estado:\n` +
+        statusOptions.map(s => `${s.value} - ${s.text}`).join('\n'),
+        currentStatus
+    );
+    
+    if (newStatus && statusOptions.some(s => s.value === newStatus)) {
+        orders[orderIndex].status = newStatus;
+        orders[orderIndex].updated_at = new Date().toISOString();
+        
+        localStorage.setItem('kitchenOrders', JSON.stringify(orders));
+        
+        showNotification(`Estado del pedido #${orderId} actualizado a: ${getOrderStatusText(newStatus)}`, 'success');
+        
+        // Recargar vista
+        loadOrdersSection();
+        loadActiveTablesOverview();
+        closeOrderDetailsModal();
+    }
+}
+
+async function generateBill(orderId) {
+    const orders = JSON.parse(localStorage.getItem('kitchenOrders') || '[]');
+    const order = orders.find(o => o.id === orderId);
+    
+    if (!order) {
+        showNotification('Pedido no encontrado', 'error');
+        return;
+    }
+    
+    // Si el pedido tiene mesa, generar cuenta de mesa
+    if (order.table_number) {
+        generateTableBill(order.table_number);
+    } else {
+        // Generar cuenta individual
+        currentBill = {
+            tableNumber: 'Individual',
+            orders: [order],
+            items: order.items || [],
+            totalAmount: order.total_amount || 0,
+            timestamp: new Date().toISOString()
+        };
+        
+        showBillModal();
+    }
+}
+
+function viewTableOrders(tableNumber) {
+    // Filtrar por mesa y mostrar
+    const tableFilter = document.getElementById('orderTableFilter');
+    if (tableFilter) {
+        tableFilter.value = tableNumber;
+        loadOrdersSection(); // Recargar con filtro aplicado
+    }
 }
 
 // ==========================================

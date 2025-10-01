@@ -8,7 +8,10 @@ let currentOrder = {
     items: [],
     table_number: null,
     customer_name: '',
-    total: 0
+    employee_name: '',
+    total: 0,
+    notes: '',
+    order_type: 'dine_in' // dine_in, takeaway, delivery
 };
 let menuItems = [];
 let allOrders = [];
@@ -182,6 +185,8 @@ function showSection(sectionName) {
     // Cargar datos específicos de la sección
     if (sectionName === 'kitchen') {
         loadKitchenOrders();
+    } else if (sectionName === 'bills') {
+        loadEmployeeBills();
     } else if (sectionName === 'reservations') {
         loadEmployeeReservations();
     } else if (sectionName === 'history') {
@@ -376,15 +381,30 @@ async function submitOrder() {
         return;
     }
     
+    if (!customerName.trim()) {
+        showNotification('Por favor ingresa el nombre del cliente', 'warning');
+        return;
+    }
+    
+    // Calcular total del pedido
+    const totalAmount = currentOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
     const orderData = {
         table_number: parseInt(tableNumber),
-        customer_name: customerName,
+        customer_name: customerName.trim(),
+        employee_name: currentEmployee?.name || 'Empleado',
+        employee_id: currentEmployee?.id,
+        total_amount: totalAmount,
         items: currentOrder.items.map(item => ({
             menu_item_id: item.id,
+            name: item.name,
             quantity: item.quantity,
+            price: item.price,
+            total: item.price * item.quantity,
             notes: item.notes || ''
         })),
-        notes: orderNotes
+        notes: orderNotes,
+        order_type: currentOrder.order_type || 'dine_in'
     };
     
     const submitBtn = document.getElementById('submitOrderBtn');
@@ -639,6 +659,392 @@ function filterMenuByCategory(category) {
 }
 
 // ==========================================
+// GESTIÓN DE CUENTAS/MESAS
+// ==========================================
+
+let currentEmployeeBill = null;
+
+async function loadEmployeeBills() {
+    try {
+        // Cargar pedidos activos (no pagados) desde localStorage
+        const allOrders = JSON.parse(localStorage.getItem('kitchenOrders') || '[]');
+        const activeOrders = allOrders.filter(order => 
+            !['paid', 'cancelled'].includes(order.status)
+        );
+        
+        // Agrupar por mesa
+        const tableOrders = {};
+        activeOrders.forEach(order => {
+            const tableNum = order.table_number || 'N/A';
+            if (!tableOrders[tableNum]) {
+                tableOrders[tableNum] = {
+                    orders: [],
+                    totalAmount: 0,
+                    totalItems: 0,
+                    lastActivity: null,
+                    isReady: false
+                };
+            }
+            tableOrders[tableNum].orders.push(order);
+            tableOrders[tableNum].totalAmount += order.total_amount || 0;
+            tableOrders[tableNum].totalItems += order.items?.length || 0;
+            
+            // Actualizar última actividad
+            const orderTime = new Date(order.created_at);
+            if (!tableOrders[tableNum].lastActivity || orderTime > tableOrders[tableNum].lastActivity) {
+                tableOrders[tableNum].lastActivity = orderTime;
+            }
+            
+            // Verificar si está listo para cobrar
+            if (order.status === 'served' || order.status === 'ready') {
+                tableOrders[tableNum].isReady = true;
+            }
+        });
+        
+        // Actualizar estadísticas
+        updateBillsStats(tableOrders);
+        
+        // Mostrar mesas
+        displayEmployeeTablesGrid(tableOrders);
+        
+        console.log(`✅ Cargadas ${Object.keys(tableOrders).length} mesas activas para empleado`);
+        
+    } catch (error) {
+        console.error('❌ Error cargando cuentas:', error);
+        showNotification('Error cargando cuentas: ' + error.message, 'error');
+    }
+}
+
+function updateBillsStats(tableOrders) {
+    const activeTables = Object.keys(tableOrders).length;
+    const totalPending = Object.values(tableOrders).reduce((sum, table) => sum + table.totalAmount, 0);
+    const tablesReady = Object.values(tableOrders).filter(table => table.isReady).length;
+    
+    // Actualizar elementos del DOM
+    const activeTablesElement = document.getElementById('activeTables');
+    const totalPendingElement = document.getElementById('totalPending');
+    const tablesReadyElement = document.getElementById('tablesReady');
+    
+    if (activeTablesElement) activeTablesElement.textContent = activeTables;
+    if (totalPendingElement) totalPendingElement.textContent = `€${totalPending.toFixed(2)}`;
+    if (tablesReadyElement) tablesReadyElement.textContent = tablesReady;
+}
+
+function displayEmployeeTablesGrid(tableOrders) {
+    const grid = document.getElementById('employeeTablesGrid');
+    
+    if (!grid) return;
+    
+    if (Object.keys(tableOrders).length === 0) {
+        grid.innerHTML = `
+            <div class="no-tables">
+                <i class="fas fa-table"></i>
+                <p>No hay mesas activas</p>
+                <small>Las mesas aparecerán aquí cuando tengan pedidos pendientes</small>
+            </div>
+        `;
+        return;
+    }
+    
+    grid.innerHTML = Object.entries(tableOrders).map(([tableNum, data]) => {
+        const statusClass = data.isReady ? 'ready' : 'active';
+        const statusIcon = data.isReady ? '✅' : '🕐';
+        const statusText = data.isReady ? 'Lista para cobrar' : 'En proceso';
+        
+        return `
+            <div class="employee-table-card ${statusClass}">
+                <div class="table-header">
+                    <h4>Mesa ${tableNum}</h4>
+                    <span class="table-status ${statusClass}">
+                        ${statusIcon} ${statusText}
+                    </span>
+                </div>
+                <div class="table-info">
+                    <div class="info-row">
+                        <span class="info-label">Pedidos:</span>
+                        <span class="info-value">${data.orders.length}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Items:</span>
+                        <span class="info-value">${data.totalItems}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Total:</span>
+                        <span class="info-value total-amount">€${data.totalAmount.toFixed(2)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Cliente:</span>
+                        <span class="info-value">${data.orders[0]?.customer_name || 'N/A'}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Última actividad:</span>
+                        <span class="info-value time-value">${formatTime(data.lastActivity)}</span>
+                    </div>
+                </div>
+                <div class="table-actions">
+                    <button class="btn btn-primary btn-sm" onclick="viewEmployeeTableBill('${tableNum}')">
+                        <i class="fas fa-eye"></i> Ver Cuenta
+                    </button>
+                    ${data.isReady ? `
+                        <button class="btn btn-success btn-sm" onclick="notifyTableReady('${tableNum}')">
+                            <i class="fas fa-bell"></i> Avisar Admin
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function formatTime(date) {
+    if (!date) return 'N/A';
+    const now = new Date();
+    const diff = now - date;
+    const minutes = Math.floor(diff / 60000);
+    
+    if (minutes < 1) return 'Ahora mismo';
+    if (minutes < 60) return `Hace ${minutes} min`;
+    
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `Hace ${hours}h ${minutes % 60}min`;
+    
+    return date.toLocaleString('es-ES');
+}
+
+async function viewEmployeeTableBill(tableNumber) {
+    try {
+        const allOrders = JSON.parse(localStorage.getItem('kitchenOrders') || '[]');
+        const tableOrders = allOrders.filter(order => 
+            order.table_number == tableNumber && !['paid', 'cancelled'].includes(order.status)
+        );
+        
+        if (tableOrders.length === 0) {
+            showNotification('No hay pedidos activos para esta mesa', 'warning');
+            return;
+        }
+        
+        // Consolidar items de todos los pedidos de la mesa
+        const allItems = [];
+        let totalAmount = 0;
+        
+        tableOrders.forEach(order => {
+            if (order.items) {
+                order.items.forEach(item => {
+                    const existingItem = allItems.find(i => i.name === item.name);
+                    if (existingItem) {
+                        existingItem.quantity += item.quantity;
+                        existingItem.total += (item.total || item.price * item.quantity);
+                    } else {
+                        allItems.push({
+                            ...item,
+                            total: item.total || item.price * item.quantity
+                        });
+                    }
+                });
+            }
+            totalAmount += order.total_amount || 0;
+        });
+        
+        currentEmployeeBill = {
+            tableNumber,
+            orders: tableOrders,
+            items: allItems,
+            totalAmount,
+            customerName: tableOrders[0]?.customer_name || 'Cliente',
+            timestamp: new Date().toISOString()
+        };
+        
+        showEmployeeBillModal();
+        
+    } catch (error) {
+        console.error('Error viendo cuenta de mesa:', error);
+        showNotification('Error cargando la cuenta', 'error');
+    }
+}
+
+function showEmployeeBillModal() {
+    if (!currentEmployeeBill) return;
+    
+    const title = document.getElementById('employeeBillTitle');
+    const details = document.getElementById('employeeBillDetails');
+    
+    if (title) {
+        title.textContent = `Cuenta Mesa ${currentEmployeeBill.tableNumber}`;
+    }
+    
+    if (details) {
+        details.innerHTML = `
+            <div class="employee-bill-header">
+                <div class="bill-info">
+                    <h4>☕ Café Aroma</h4>
+                    <p><strong>Mesa:</strong> ${currentEmployeeBill.tableNumber}</p>
+                    <p><strong>Cliente:</strong> ${currentEmployeeBill.customerName}</p>
+                    <p><strong>Pedidos:</strong> ${currentEmployeeBill.orders.length}</p>
+                    <p><strong>Fecha:</strong> ${formatDateTime(currentEmployeeBill.timestamp)}</p>
+                </div>
+            </div>
+            
+            <div class="employee-bill-items">
+                <h4>Detalle de la Cuenta</h4>
+                <table class="employee-bill-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>Cant.</th>
+                            <th>Precio</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${currentEmployeeBill.items.map(item => `
+                            <tr>
+                                <td>${item.name}</td>
+                                <td>${item.quantity}</td>
+                                <td>€${item.price.toFixed(2)}</td>
+                                <td>€${item.total.toFixed(2)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                    <tfoot>
+                        <tr class="employee-bill-total">
+                            <td colspan="3"><strong>TOTAL</strong></td>
+                            <td><strong>€${currentEmployeeBill.totalAmount.toFixed(2)}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            <div class="order-status-info">
+                <h4>Estado de los Pedidos</h4>
+                ${currentEmployeeBill.orders.map(order => `
+                    <div class="order-status-item">
+                        <span class="order-id">Pedido #${order.id}</span>
+                        <span class="status-badge status-${order.status}">
+                            ${getOrderStatusText(order.status)}
+                        </span>
+                        <span class="order-time">${formatTime(new Date(order.created_at))}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+    
+    const modal = document.getElementById('employeeBillModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+function closeEmployeeBillModal() {
+    const modal = document.getElementById('employeeBillModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    currentEmployeeBill = null;
+}
+
+function getOrderStatusText(status) {
+    const statusTexts = {
+        'pending': 'Pendiente',
+        'preparing': 'Preparando',
+        'ready': 'Listo',
+        'served': 'Servido',
+        'paid': 'Pagado',
+        'cancelled': 'Cancelado'
+    };
+    return statusTexts[status] || status;
+}
+
+async function requestBillPrint() {
+    if (!currentEmployeeBill) return;
+    
+    try {
+        // Simular solicitud de impresión al admin
+        const printRequests = JSON.parse(localStorage.getItem('printRequests') || '[]');
+        printRequests.unshift({
+            id: Date.now(),
+            tableNumber: currentEmployeeBill.tableNumber,
+            employeeName: currentEmployee?.name || 'Empleado',
+            timestamp: new Date().toISOString(),
+            status: 'pending',
+            bill: currentEmployeeBill
+        });
+        localStorage.setItem('printRequests', JSON.stringify(printRequests));
+        
+        showNotification(`Solicitud de impresión enviada para Mesa ${currentEmployeeBill.tableNumber}`, 'success');
+        closeEmployeeBillModal();
+        
+    } catch (error) {
+        console.error('Error solicitando impresión:', error);
+        showNotification('Error enviando solicitud de impresión', 'error');
+    }
+}
+
+async function markTableAsReady() {
+    if (!currentEmployeeBill) return;
+    
+    try {
+        // Marcar todos los pedidos de la mesa como 'served' si no lo están ya
+        const allOrders = JSON.parse(localStorage.getItem('kitchenOrders') || '[]');
+        let updated = false;
+        
+        currentEmployeeBill.orders.forEach(billOrder => {
+            const orderIndex = allOrders.findIndex(o => o.id === billOrder.id);
+            if (orderIndex !== -1 && allOrders[orderIndex].status !== 'served') {
+                allOrders[orderIndex].status = 'served';
+                allOrders[orderIndex].served_at = new Date().toISOString();
+                updated = true;
+            }
+        });
+        
+        if (updated) {
+            localStorage.setItem('kitchenOrders', JSON.stringify(allOrders));
+            showNotification(`Mesa ${currentEmployeeBill.tableNumber} marcada como lista para cobrar`, 'success');
+        }
+        
+        closeEmployeeBillModal();
+        loadEmployeeBills(); // Recargar vista
+        
+    } catch (error) {
+        console.error('Error marcando mesa como lista:', error);
+        showNotification('Error actualizando estado de la mesa', 'error');
+    }
+}
+
+async function notifyTableReady(tableNumber) {
+    try {
+        // Enviar notificación al admin
+        const notifications = JSON.parse(localStorage.getItem('adminNotifications') || '[]');
+        notifications.unshift({
+            id: Date.now(),
+            type: 'table_ready',
+            tableNumber: tableNumber,
+            employeeName: currentEmployee?.name || 'Empleado',
+            message: `Mesa ${tableNumber} lista para cobrar`,
+            timestamp: new Date().toISOString(),
+            read: false
+        });
+        localStorage.setItem('adminNotifications', JSON.stringify(notifications));
+        
+        showNotification(`Notificación enviada al administrador - Mesa ${tableNumber}`, 'success');
+        
+    } catch (error) {
+        console.error('Error enviando notificación:', error);
+        showNotification('Error enviando notificación', 'error');
+    }
+}
+
+function refreshBills() {
+    loadEmployeeBills();
+    showNotification('Cuentas actualizadas', 'success');
+}
+
+function formatDateTime(dateString) {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleString('es-ES');
+}
+
+// ==========================================
 // RESERVAS PARA EMPLEADOS
 // ==========================================
 
@@ -842,6 +1248,13 @@ function setupKitchenEventListeners() {
             loadEmployeeReservations();
         }
     }, 10000);
+    
+    // Auto-refresh cada 15 segundos para cuentas
+    setInterval(() => {
+        if (document.getElementById('billsSection').classList.contains('active')) {
+            loadEmployeeBills();
+        }
+    }, 15000);
 }
 
 async function loadKitchenOrders() {
