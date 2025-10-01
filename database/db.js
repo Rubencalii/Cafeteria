@@ -74,6 +74,35 @@ const initializeDB = () => {
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
 
+        // Tabla de logs de emails
+        db.run(`CREATE TABLE IF NOT EXISTS email_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            reservation_id INTEGER,
+            contact_id INTEGER,
+            email_to TEXT NOT NULL,
+            subject TEXT NOT NULL,
+            status TEXT DEFAULT 'sent',
+            sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            message_id TEXT,
+            error_message TEXT,
+            FOREIGN KEY (reservation_id) REFERENCES reservations (id),
+            FOREIGN KEY (contact_id) REFERENCES contacts (id)
+        )`);
+
+        // Tabla de acciones administrativas
+        db.run(`CREATE TABLE IF NOT EXISTS admin_actions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            admin_id INTEGER,
+            action_type TEXT NOT NULL,
+            target_type TEXT NOT NULL,
+            target_id INTEGER NOT NULL,
+            description TEXT,
+            ip_address TEXT,
+            user_agent TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (admin_id) REFERENCES users (id)
+        )`);
+
         console.log('✅ Tablas de la base de datos creadas exitosamente');
     });
 

@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { getDB } = require('../../database/db');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const emailService = require('../services/emailService');
 
 const router = express.Router();
 
@@ -133,7 +134,7 @@ router.get('/', authenticateToken, requireAdmin, (req, res) => {
 // Actualizar estado de reserva (solo admin)
 router.patch('/:id/status', authenticateToken, requireAdmin, [
     body('status').isIn(['pending', 'confirmed', 'cancelled']).withMessage('Estado inválido')
-], (req, res) => {
+], async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({
@@ -147,31 +148,107 @@ router.patch('/:id/status', authenticateToken, requireAdmin, [
     const { status } = req.body;
     const db = getDB();
 
-    const sql = 'UPDATE reservations SET status = ? WHERE id = ?';
-    
-    db.run(sql, [status, id], function(err) {
-        if (err) {
-            console.error('Error actualizando reserva:', err);
-            return res.status(500).json({
-                success: false,
-                message: 'Error al actualizar reserva'
+    try {
+        // Primero obtener los datos de la reserva
+        const getReservationSql = 'SELECT * FROM reservations WHERE id = ?';
+        const reservation = await new Promise((resolve, reject) => {
+            db.get(getReservationSql, [id], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
             });
-        }
+        });
 
-        if (this.changes === 0) {
+        if (!reservation) {
             return res.status(404).json({
                 success: false,
                 message: 'Reserva no encontrada'
             });
         }
 
-        res.json({
-            success: true,
-            message: `Reserva ${status === 'confirmed' ? 'confirmada' : status === 'cancelled' ? 'cancelada' : 'actualizada'} exitosamente`
+        // Actualizar el estado
+        const updateSql = 'UPDATE reservations SET status = ? WHERE id = ?';
+        await new Promise((resolve, reject) => {
+            db.run(updateSql, [status, id], function(err) {
+                if (err) reject(err);
+                else resolve(this.changes);
+            });
         });
 
+        // Enviar email automáticamente si el estado es confirmed o cancelled
+        let emailSent = false;
+        let emailError = null;
+
+        if (status === 'confirmed' || status === 'cancelled') {
+            try {
+                const emailResult = await emailService.sendReservationEmail(reservation, status);
+                emailSent = true;
+
+                // Guardar log del email
+                const logSql = `INSERT INTO email_logs (reservation_id, email_to, subject, status, sent_at, message_id)
+                               VALUES (?, ?, ?, ?, datetime('now'), ?)`;
+                
+                db.run(logSql, [
+                    id,
+                    reservation.email,
+                    emailResult.subject,
+                    'sent',
+                    emailResult.messageId
+                ]);
+
+                console.log(`✅ Email de ${status} enviado a ${reservation.email}`);
+
+            } catch (error) {
+                console.error(`❌ Error enviando email de ${status}:`, error);
+                emailError = error.message;
+
+                // Guardar log del error
+                const errorLogSql = `INSERT INTO email_logs (reservation_id, email_to, subject, status, sent_at, error_message)
+                                    VALUES (?, ?, ?, ?, datetime('now'), ?)`;
+                
+                db.run(errorLogSql, [
+                    id,
+                    reservation.email,
+                    `Error: Email de ${status}`,
+                    'failed',
+                    error.message
+                ]);
+            }
+        }
+
+        // Registrar acción administrativa
+        const actionSql = `INSERT INTO admin_actions (admin_id, action_type, target_type, target_id, description, ip_address)
+                          VALUES (?, ?, ?, ?, ?, ?)`;
+        
+        db.run(actionSql, [
+            req.user?.id || 1, // ID del admin desde el token JWT
+            'update_status',
+            'reservation',
+            id,
+            `Reserva ${status} - ${emailSent ? 'Email enviado' : 'Email no enviado'}`,
+            req.ip
+        ]);
+
+        res.json({
+            success: true,
+            message: `Reserva ${status === 'confirmed' ? 'confirmada' : status === 'cancelled' ? 'cancelada' : 'actualizada'} exitosamente`,
+            data: {
+                reservationId: id,
+                newStatus: status,
+                emailSent: emailSent,
+                emailError: emailError
+            }
+        });
+
+    } catch (error) {
+        console.error('Error actualizando reserva:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error al actualizar reserva',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    } finally {
         db.close();
-    });
+    }
 });
 
 // Obtener estadísticas de reservas (solo admin)
