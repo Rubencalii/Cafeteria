@@ -401,7 +401,34 @@ async function submitOrder() {
         const result = await response.json();
         
         if (result.success) {
+            // Guardar pedido en localStorage para que aparezca en tiempo real en el admin
+            const order = {
+                id: result.data.id,
+                order_number: result.data.order_number,
+                table_number: result.data.table_number,
+                customer_name: result.data.customer_name,
+                total_amount: result.data.total_amount,
+                status: 'pending',
+                created_at: new Date().toISOString(),
+                employee_name: currentEmployee.name,
+                employee_role: currentEmployee.role,
+                items: currentOrder.items.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    quantity: item.quantity,
+                    price: item.price,
+                    category: item.category
+                }))
+            };
+            
+            // Agregar a localStorage para sincronización
+            const savedOrders = JSON.parse(localStorage.getItem('kitchenOrders') || '[]');
+            savedOrders.unshift(order);
+            localStorage.setItem('kitchenOrders', JSON.stringify(savedOrders));
+            
             showNotification(`¡Pedido ${result.data.order_number} creado exitosamente!`, 'success');
+            console.log('✅ Pedido creado y guardado:', order);
+            
             cancelOrder();
             loadEmployeeStats();
         } else {
@@ -419,32 +446,77 @@ async function submitOrder() {
 
 async function loadMenuItems() {
     try {
+        // Intentar cargar desde el servidor
         const response = await fetch('/api/menu');
         const result = await response.json();
         
-        if (result.success) {
+        if (result.success && result.data) {
             menuItems = result.data;
-            displayMenuItems(menuItems);
+            console.log('✅ Menú cargado desde servidor:', menuItems.length, 'elementos');
+        } else {
+            // Fallback a menú estático si el servidor falla
+            menuItems = getStaticMenu();
+            console.log('📋 Usando menú estático:', menuItems.length, 'elementos');
         }
         
+        displayMenuItems(menuItems);
+        
     } catch (error) {
-        console.error('Error cargando menú:', error);
+        console.error('Error cargando menú del servidor, usando datos estáticos:', error);
+        // Usar menú estático como fallback
+        menuItems = getStaticMenu();
+        displayMenuItems(menuItems);
     }
+}
+
+function getStaticMenu() {
+    return [
+        {id: 1, name: "Espresso", price: 2.50, category: "Café Caliente", available: true, description: "Café espresso tradicional italiano"},
+        {id: 2, name: "Cappuccino", price: 3.75, category: "Café Caliente", available: true, description: "Espresso con leche vaporizada y espuma cremosa"},
+        {id: 3, name: "Latte", price: 4.25, category: "Café Caliente", available: true, description: "Espresso suave con leche vaporizada"},
+        {id: 4, name: "Americano", price: 3.00, category: "Café Caliente", available: true, description: "Espresso diluido con agua caliente"},
+        {id: 5, name: "Mocha", price: 4.50, category: "Café Caliente", available: true, description: "Espresso con chocolate y leche vaporizada"},
+        {id: 6, name: "Frappé Vainilla", price: 5.25, category: "Café Frío", available: true, description: "Café frío batido con helado de vainilla"},
+        {id: 7, name: "Cold Brew", price: 4.00, category: "Café Frío", available: true, description: "Café de extracción en frío, suave y refrescante"},
+        {id: 8, name: "Iced Latte", price: 4.75, category: "Café Frío", available: true, description: "Latte servido con hielo y leche fría"},
+        {id: 9, name: "Tiramisú", price: 6.50, category: "Postres", available: true, description: "Postre italiano con café, mascarpone y cacao"},
+        {id: 10, name: "Cheesecake de Frutos Rojos", price: 5.75, category: "Postres", available: true, description: "Tarta de queso cremosa con salsa de frutos rojos"},
+        {id: 11, name: "Brownie con Helado", price: 6.25, category: "Postres", available: true, description: "Brownie tibio de chocolate con helado de vainilla"},
+        {id: 12, name: "Croissant de Almendras", price: 4.50, category: "Postres", available: true, description: "Croissant relleno de crema de almendras"},
+        {id: 13, name: "Tostadas Francesas", price: 7.50, category: "Desayunos", available: true, description: "Pan brioche con canela, miel y frutos rojos"},
+        {id: 14, name: "Bowl de Açaí", price: 8.25, category: "Desayunos", available: true, description: "Açaí con granola, frutas frescas y miel"},
+        {id: 15, name: "Sandwich de Pollo", price: 9.50, category: "Desayunos", available: true, description: "Pan ciabatta con pollo, aguacate y vegetales"},
+        {id: 16, name: "Pancakes de Arándanos", price: 8.75, category: "Desayunos", available: true, description: "Pancakes esponjosos con arándanos frescos"}
+    ];
 }
 
 function displayMenuItems(items) {
     const container = document.getElementById('menuItems');
-    if (!container) return;
+    if (!container) {
+        console.error('Contenedor menuItems no encontrado');
+        return;
+    }
     
     container.innerHTML = '';
     
+    if (items.length === 0) {
+        container.innerHTML = '<p class="no-items">No hay elementos en el menú disponibles</p>';
+        return;
+    }
+    
     items.forEach(item => {
+        if (!item.available) return; // Solo mostrar items disponibles
+        
         const itemCard = document.createElement('div');
         itemCard.className = 'menu-item-card';
+        itemCard.setAttribute('data-item-id', item.id);
         itemCard.innerHTML = `
-            <div class="menu-item-name">${item.name}</div>
-            <div class="menu-item-description">${item.description || ''}</div>
-            <div class="menu-item-price">€${item.price.toFixed(2)}</div>
+            <div class="menu-item-content">
+                <div class="menu-item-name">${item.name}</div>
+                <div class="menu-item-description">${item.description || ''}</div>
+                <div class="menu-item-category">${item.category}</div>
+                <div class="menu-item-price">€${item.price.toFixed(2)}</div>
+            </div>
             <div class="quantity-controls" style="display: none;">
                 <button class="quantity-btn" onclick="changeQuantity(${item.id}, -1)">-</button>
                 <span class="quantity-display">0</span>
@@ -455,6 +527,8 @@ function displayMenuItems(items) {
         itemCard.addEventListener('click', () => selectMenuItem(item));
         container.appendChild(itemCard);
     });
+    
+    console.log(`📋 Mostrados ${items.filter(i => i.available).length} elementos del menú`);
 }
 
 function selectMenuItem(item) {
@@ -586,21 +660,45 @@ function setupKitchenEventListeners() {
 
 async function loadKitchenOrders() {
     try {
-        const response = await fetch('/api/orders', {
-            headers: {
-                'Authorization': `Bearer ${employeeToken}`
+        let serverOrders = [];
+        
+        // Intentar cargar desde el servidor
+        try {
+            const response = await fetch('/api/orders', {
+                headers: {
+                    'Authorization': `Bearer ${employeeToken}`
+                }
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    serverOrders = result.data || [];
+                }
             }
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            allOrders = result.data;
-            displayKitchenOrders(allOrders);
+        } catch (serverError) {
+            console.log('Servidor no disponible, usando datos locales');
         }
+        
+        // Obtener pedidos del localStorage
+        const localOrders = JSON.parse(localStorage.getItem('kitchenOrders') || '[]');
+        
+        // Combinar pedidos del servidor y locales
+        allOrders = [...serverOrders, ...localOrders];
+        
+        // Ordenar por fecha de creación (más recientes primero)
+        allOrders.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        
+        displayKitchenOrders(allOrders);
+        
+        console.log(`🍳 Cargados ${allOrders.length} pedidos para cocina`);
         
     } catch (error) {
         console.error('Error cargando pedidos de cocina:', error);
+        // Mostrar solo pedidos locales como fallback
+        const localOrders = JSON.parse(localStorage.getItem('kitchenOrders') || '[]');
+        allOrders = localOrders;
+        displayKitchenOrders(allOrders);
     }
 }
 
@@ -682,23 +780,47 @@ function getOrderStatusButtons(order) {
 
 async function updateOrderStatus(orderId, newStatus) {
     try {
-        const response = await fetch(`/api/orders/${orderId}/status`, {
-            method: 'PATCH',
-            headers: {
-                'Authorization': `Bearer ${employeeToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ status: newStatus })
-        });
+        let serverUpdated = false;
         
-        const result = await response.json();
-        
-        if (result.success) {
-            showNotification(`Pedido actualizado a: ${newStatus}`, 'success');
-            loadKitchenOrders();
-        } else {
-            throw new Error(result.message);
+        // Intentar actualizar en el servidor
+        try {
+            const response = await fetch(`/api/orders/${orderId}/status`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${employeeToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status: newStatus })
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    serverUpdated = true;
+                }
+            }
+        } catch (serverError) {
+            console.log('Servidor no disponible, actualizando localmente');
         }
+        
+        // Actualizar en localStorage
+        const localOrders = JSON.parse(localStorage.getItem('kitchenOrders') || '[]');
+        const orderIndex = localOrders.findIndex(order => order.id == orderId);
+        
+        if (orderIndex !== -1) {
+            localOrders[orderIndex].status = newStatus;
+            localOrders[orderIndex].updated_at = new Date().toISOString();
+            localStorage.setItem('kitchenOrders', JSON.stringify(localOrders));
+        }
+        
+        // Actualizar en allOrders para la vista actual
+        const currentOrderIndex = allOrders.findIndex(order => order.id == orderId);
+        if (currentOrderIndex !== -1) {
+            allOrders[currentOrderIndex].status = newStatus;
+        }
+        
+        showNotification(`Pedido actualizado a: ${getStatusLabel(newStatus)}`, 'success');
+        loadKitchenOrders();
         
     } catch (error) {
         console.error('Error actualizando estado del pedido:', error);

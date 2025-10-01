@@ -116,7 +116,27 @@ function setupEventListeners() {
     // Verificar periódicamente cambios en localStorage (para la misma pestaña)
     setInterval(() => {
         updateDashboardStats();
+        // Actualizar secciones activas
+        const activeSection = document.querySelector('.content-section.active');
+        if (activeSection) {
+            const sectionId = activeSection.id;
+            if (sectionId === 'reservationsSection') {
+                loadReservations();
+            } else if (sectionId === 'contactsSection') {
+                loadContacts();
+            } else if (sectionId === 'employeesSection') {
+                loadEmployeeTimeEntries();
+            }
+        }
     }, 5000); // Actualizar cada 5 segundos
+    
+    // Actualización más frecuente para empleados (cada 2 segundos)
+    setInterval(() => {
+        const activeSection = document.querySelector('.content-section.active');
+        if (activeSection && activeSection.id === 'employeesSection') {
+            loadEmployeeTimeEntries();
+        }
+    }, 2000);
 }
 
 // ==========================================
@@ -255,6 +275,7 @@ function showSection(sectionName) {
             break;
         case 'employees':
             loadEmployeesSection();
+            loadEmployeeTimeEntries();
             break;
         case 'analytics':
             loadAnalytics();
@@ -706,18 +727,50 @@ async function loadMenu() {
     try {
         showLoading(true);
         
-        // Usar datos estáticos del menú
-        const menuData = window.staticData ? window.staticData.menu : [
-            {id: 1, name: "Café Americano", price: 2.50, category: "Café Caliente", available: true, description: "Café negro clásico"},
-            {id: 2, name: "Cappuccino", price: 3.50, category: "Café Caliente", available: true, description: "Café con leche vaporizada"},
-            {id: 3, name: "Latte Macchiato", price: 4.00, category: "Café Caliente", available: true, description: "Capas perfectas de café y leche"},
-            {id: 4, name: "Café Frappé", price: 4.50, category: "Café Frío", available: true, description: "Bebida helada refrescante"},
-            {id: 5, name: "Cold Brew", price: 3.80, category: "Café Frío", available: true, description: "Café extraído en frío"},
-            {id: 6, name: "Tostada de Aguacate", price: 6.50, category: "Desayunos", available: true, description: "Pan tostado con aguacate fresco"},
-            {id: 7, name: "Croissant de Almendra", price: 3.20, category: "Postres", available: true, description: "Croissant hojaldrado relleno"},
-            {id: 8, name: "Cheesecake", price: 5.50, category: "Postres", available: true, description: "Tarta de queso cremosa"},
-            {id: 9, name: "Bowl de Açaí", price: 7.80, category: "Desayunos", available: true, description: "Bowl energético con frutas"}
-        ];
+        // Intentar cargar desde el servidor primero
+        let menuData = [];
+        
+        try {
+            const response = await fetch('/api/menu', {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    menuData = result.data;
+                    console.log('✅ Menú cargado desde servidor:', menuData.length, 'elementos');
+                }
+            }
+        } catch (serverError) {
+            console.log('Servidor no disponible, usando datos estáticos');
+        }
+        
+        // Si no hay datos del servidor, usar datos estáticos
+        if (menuData.length === 0) {
+            menuData = window.staticData ? window.staticData.menu : [
+                {id: 1, name: "Espresso", price: 2.50, category: "Café Caliente", available: true, description: "Café espresso tradicional italiano"},
+                {id: 2, name: "Cappuccino", price: 3.75, category: "Café Caliente", available: true, description: "Espresso con leche vaporizada y espuma cremosa"},
+                {id: 3, name: "Latte", price: 4.25, category: "Café Caliente", available: true, description: "Espresso suave con leche vaporizada"},
+                {id: 4, name: "Americano", price: 3.00, category: "Café Caliente", available: true, description: "Espresso diluido con agua caliente"},
+                {id: 5, name: "Mocha", price: 4.50, category: "Café Caliente", available: true, description: "Espresso con chocolate y leche vaporizada"},
+                {id: 6, name: "Frappé Vainilla", price: 5.25, category: "Café Frío", available: true, description: "Café frío batido con helado de vainilla"},
+                {id: 7, name: "Cold Brew", price: 4.00, category: "Café Frío", available: true, description: "Café de extracción en frío, suave y refrescante"},
+                {id: 8, name: "Iced Latte", price: 4.75, category: "Café Frío", available: true, description: "Latte servido con hielo y leche fría"},
+                {id: 9, name: "Tiramisú", price: 6.50, category: "Postres", available: true, description: "Postre italiano con café, mascarpone y cacao"},
+                {id: 10, name: "Cheesecake de Frutos Rojos", price: 5.75, category: "Postres", available: true, description: "Tarta de queso cremosa con salsa de frutos rojos"},
+                {id: 11, name: "Brownie con Helado", price: 6.25, category: "Postres", available: true, description: "Brownie tibio de chocolate con helado de vainilla"},
+                {id: 12, name: "Croissant de Almendras", price: 4.50, category: "Postres", available: true, description: "Croissant relleno de crema de almendras"},
+                {id: 13, name: "Tostadas Francesas", price: 7.50, category: "Desayunos", available: true, description: "Pan brioche con canela, miel y frutos rojos"},
+                {id: 14, name: "Bowl de Açaí", price: 8.25, category: "Desayunos", available: true, description: "Açaí con granola, frutas frescas y miel"},
+                {id: 15, name: "Sandwich de Pollo", price: 9.50, category: "Desayunos", available: true, description: "Pan ciabatta con pollo, aguacate y vegetales"},
+                {id: 16, name: "Pancakes de Arándanos", price: 8.75, category: "Desayunos", available: true, description: "Pancakes esponjosos con arándanos frescos"}
+            ];
+            console.log('📋 Usando menú estático:', menuData.length, 'elementos');
+        }
         
         displayMenu(menuData);
         
@@ -903,26 +956,43 @@ async function loadContacts(page = 1) {
             url += `&status=${statusFilter}`;
         }
         
-        // Cargar mensajes desde el backend real
-        const response = await fetch(url, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
+        // Cargar mensajes del localStorage (los nuevos del sitio web)
+        const savedMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+        
+        // Intentar cargar desde el servidor también
+        let serverMessages = [];
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    serverMessages = result.data.contacts || [];
+                }
             }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        } catch (serverError) {
+            console.log('Servidor no disponible, usando datos locales');
         }
         
-        const result = await response.json();
+        // Combinar mensajes del servidor y localStorage
+        const allMessages = [...serverMessages, ...savedMessages];
         
-        if (!result.success) {
-            throw new Error(result.message || 'Error cargando contactos');
+        // Filtrar por estado si se especifica
+        let filteredMessages = allMessages;
+        if (statusFilter && statusFilter !== 'all') {
+            filteredMessages = allMessages.filter(m => m.status === statusFilter);
         }
+        
+        // Ordenar por fecha (más recientes primero)
+        filteredMessages.sort((a, b) => new Date(b.created_at || b.date) - new Date(a.created_at || a.date));
         
         // Mostrar contactos
-        displayContacts(result.data.contacts || []);
+        displayContacts(filteredMessages);
         
         // Actualizar información de paginación
         if (result.data.pagination) {
@@ -969,13 +1039,17 @@ function displayContacts(contacts) {
         return;
     }
     
-    tbody.innerHTML = contacts.map(contact => `
+    tbody.innerHTML = contacts.map(contact => {
+        const contactDate = contact.created_at || contact.date;
+        const contactSubject = contact.subject || contact.message?.substring(0, 30) + '...';
+        
+        return `
         <tr>
             <td>#${contact.id}</td>
             <td>${contact.name}</td>
             <td>${contact.email}</td>
-            <td>${contact.subject.substring(0, 30)}...</td>
-            <td>${formatDate(contact.created_at)}</td>
+            <td>${contactSubject}</td>
+            <td>${formatDate(contactDate)}</td>
             <td>
                 <span class="status-badge status-${contact.status}">
                     ${getContactStatusText(contact.status)}
@@ -983,19 +1057,20 @@ function displayContacts(contacts) {
             </td>
             <td>
                 <div class="action-buttons">
-                    <button class="btn-icon view" onclick="viewContact(${contact.id})" title="Ver mensaje">
+                    <button class="btn-icon view" onclick="viewContactMessage(${JSON.stringify(contact).replace(/"/g, '&quot;')})" title="Ver mensaje">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="btn-icon reply" onclick="openReplyModal(${contact.id})" title="Responder por email">
+                    <button class="btn-icon reply" onclick="openContactReplyModal(${JSON.stringify(contact).replace(/"/g, '&quot;')})" title="Responder por email">
                         <i class="fas fa-reply"></i>
                     </button>
-                    <button class="btn-icon edit" onclick="updateContactStatus(${contact.id}, 'read')" title="Marcar como leído">
+                    <button class="btn-icon edit" onclick="markContactAsRead(${contact.id})" title="Marcar como leído">
                         <i class="fas fa-check"></i>
                     </button>
                 </div>
             </td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
 }
 
 async function viewContact(id) {
@@ -1073,6 +1148,157 @@ function markAsReplied() {
 function refreshContacts() {
     loadContacts();
     showNotification('Contactos actualizados', 'success');
+}
+
+// ==========================================
+// EMPLEADOS
+// ==========================================
+async function loadEmployeesSection() {
+    try {
+        showLoading(true);
+        
+        // Cargar lista de empleados
+        const response = await fetch('/api/employees/list', {
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.message || 'Error cargando empleados');
+        }
+        
+        displayEmployees(result.data || []);
+        
+        console.log(`✅ Cargados ${result.data.length} empleados`);
+        
+    } catch (error) {
+        console.error('❌ Error cargando empleados:', error);
+        
+        const tbody = document.getElementById('employeesTableBody');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center error-message">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Error cargando empleados: ${error.message}
+                        <br>
+                        <button onclick="loadEmployeesSection()" class="btn btn-primary" style="margin-top: 10px;">
+                            <i class="fas fa-refresh"></i> Reintentar
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        showNotification('Error cargando empleados: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+function displayEmployees(employees) {
+    const tbody = document.getElementById('employeesTableBody');
+    
+    if (!employees || employees.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No hay empleados registrados</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = employees.map(employee => `
+        <tr>
+            <td>${employee.employee_code}</td>
+            <td>
+                <strong>${employee.name}</strong><br>
+                <small>${employee.role}</small>
+            </td>
+            <td>
+                <span class="status-badge ${employee.status === 'active' ? 'status-confirmed' : 'status-cancelled'}">
+                    ${employee.status === 'active' ? 'Activo' : 'Inactivo'}
+                </span>
+            </td>
+            <td>${employee.today_entries || 0}</td>
+            <td>${employee.current_session ? 'Trabajando' : 'Fuera'}</td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn-icon view" onclick="viewEmployeeDetails('${employee.id}')" title="Ver detalles">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn-icon edit" onclick="editEmployee('${employee.id}')" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+async function loadEmployeeTimeEntries() {
+    try {
+        const response = await fetch('/api/employees/time-entries', {
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Error cargando registros de tiempo');
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            displayTimeEntries(result.data || []);
+        }
+        
+    } catch (error) {
+        console.error('Error cargando registros de tiempo:', error);
+    }
+}
+
+function displayTimeEntries(entries) {
+    const container = document.getElementById('employeeTimeEntries');
+    if (!container) return;
+    
+    if (entries.length === 0) {
+        container.innerHTML = '<p class="no-entries">No hay registros de tiempo recientes</p>';
+        return;
+    }
+    
+    container.innerHTML = entries.slice(0, 10).map(entry => {
+        const entryTime = new Date(entry.clock_in);
+        const duration = entry.total_hours ? `${entry.total_hours.toFixed(2)}h` : 'En curso';
+        
+        return `
+            <div class="time-entry-item">
+                <div class="entry-employee">
+                    <strong>${entry.employee_name}</strong>
+                    <small>${entry.role}</small>
+                </div>
+                <div class="entry-details">
+                    <div class="entry-time">${entryTime.toLocaleString('es-ES')}</div>
+                    <div class="entry-duration">${duration}</div>
+                </div>
+                <div class="entry-status ${entry.clock_out ? 'completed' : 'active'}">
+                    ${entry.clock_out ? '✅ Completado' : '🟢 Activo'}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function refreshEmployees() {
+    loadEmployeesSection();
+    loadEmployeeTimeEntries();
+    showNotification('Empleados actualizados', 'success');
 }
 
 // ==========================================
@@ -1685,6 +1911,76 @@ function getContactStatusText(status) {
         'replied': 'Respondido'
     };
     return statusTexts[status] || status;
+}
+
+// Funciones para manejar contactos
+function viewContactMessage(contact) {
+    const modal = document.createElement('div');
+    modal.className = 'contact-modal-overlay';
+    modal.innerHTML = `
+        <div class="contact-modal-content">
+            <div class="contact-modal-header">
+                <h3>💬 Mensaje de Contacto</h3>
+                <button onclick="closeContactModal()" class="close-btn">&times;</button>
+            </div>
+            <div class="contact-modal-body">
+                <div class="contact-info">
+                    <p><strong>De:</strong> ${contact.name}</p>
+                    <p><strong>Email:</strong> ${contact.email}</p>
+                    <p><strong>Teléfono:</strong> ${contact.phone || 'No proporcionado'}</p>
+                    <p><strong>Fecha:</strong> ${formatDate(contact.created_at || contact.date)}</p>
+                    <p><strong>Estado:</strong> <span class="status-badge status-${contact.status}">${getContactStatusText(contact.status)}</span></p>
+                </div>
+                <div class="contact-message">
+                    <h4>Mensaje:</h4>
+                    <div class="message-content">${contact.message}</div>
+                </div>
+            </div>
+            <div class="contact-modal-actions">
+                <button onclick="markContactAsRead(${contact.id})" class="btn btn-secondary">
+                    <i class="fas fa-check"></i> Marcar como Leído
+                </button>
+                <button onclick="openContactReplyModal(${JSON.stringify(contact).replace(/"/g, '&quot;')})" class="btn btn-primary">
+                    <i class="fas fa-reply"></i> Responder
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function openContactReplyModal(contact) {
+    console.log('Preparando respuesta para:', contact.name);
+    showNotification(`Función de respuesta por email en desarrollo. Contacto: ${contact.name}`, 'info');
+}
+
+function markContactAsRead(contactId) {
+    try {
+        // Actualizar en localStorage
+        const savedMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+        const messageIndex = savedMessages.findIndex(m => m.id === contactId);
+        
+        if (messageIndex !== -1) {
+            savedMessages[messageIndex].status = 'read';
+            localStorage.setItem('contactMessages', JSON.stringify(savedMessages));
+        }
+        
+        showNotification('Mensaje marcado como leído', 'success');
+        loadContacts();
+        updateDashboardStats();
+        
+    } catch (error) {
+        console.error('Error marcando mensaje como leído:', error);
+        showNotification('Error actualizando mensaje', 'error');
+    }
+}
+
+function closeContactModal() {
+    const modal = document.querySelector('.contact-modal-overlay');
+    if (modal) {
+        modal.remove();
+    }
 }
 
 // Función para actualizar paginación de contactos
