@@ -9,7 +9,8 @@ const router = express.Router();
 
 // Login de administrador
 router.post('/login', [
-    body('username').notEmpty().withMessage('El usuario es requerido'),
+    body('email').optional().isEmail().withMessage('Email inválido'),
+    body('username').optional().notEmpty().withMessage('Usuario requerido'),
     body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres')
 ], async (req, res) => {
     try {
@@ -23,12 +24,13 @@ router.post('/login', [
             });
         }
 
-        const { username, password } = req.body;
+        const { email, username, password } = req.body;
+        const loginField = email || username;
         const db = getDB();
 
         // Buscar usuario
         db.get('SELECT * FROM users WHERE username = ? OR email = ?', 
-               [username, username], 
+               [loginField, loginField], 
                async (err, user) => {
             if (err) {
                 console.error('Error en login:', err);
