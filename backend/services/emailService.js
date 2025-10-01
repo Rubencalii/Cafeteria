@@ -37,23 +37,42 @@ class EmailService {
                     }
                 });
             } else if (emailService === 'test') {
-                // Para desarrollo/testing
+                // Para desarrollo/testing - Usar transporter local sin autenticación
+                this.transporter = nodemailer.createTransport({
+                    host: 'localhost',
+                    port: 1025,
+                    secure: false,
+                    ignoreTLS: true,
+                    tls: {
+                        rejectUnauthorized: false
+                    }
+                });
+                console.log('📧 Usando servicio de email de prueba (localhost:1025)');
+            } else if (emailService === 'ethereal') {
+                // Crear cuenta Ethereal automáticamente
+                const testAccount = await nodemailer.createTestAccount();
                 this.transporter = nodemailer.createTransport({
                     host: 'smtp.ethereal.email',
                     port: 587,
                     secure: false,
                     auth: {
-                        user: 'ethereal.user@ethereal.email',
-                        pass: 'ethereal.pass'
+                        user: testAccount.user,
+                        pass: testAccount.pass
                     }
                 });
+                console.log('📧 Cuenta Ethereal creada:', testAccount.user);
+                console.log('📧 Para ver emails: https://ethereal.email/messages');
             } else {
                 throw new Error(`Servicio de email no soportado: ${emailService}`);
             }
 
-            // Verificar conexión
-            await this.transporter.verify();
-            console.log('✅ Servicio de email inicializado correctamente');
+            // Verificar conexión (solo si no es modo test local)
+            if (emailService !== 'test') {
+                await this.transporter.verify();
+                console.log('✅ Servicio de email inicializado correctamente');
+            } else {
+                console.log('✅ Servicio de email en modo prueba (sin verificación)');
+            }
             
         } catch (error) {
             console.error('❌ Error inicializando servicio de email:', error.message);
@@ -338,6 +357,23 @@ Gracias por elegir ${restaurantName}
     }
 
     async sendReservationEmail(reservation, status) {
+        // En modo test, simular envío exitoso
+        if (process.env.EMAIL_SERVICE === 'test') {
+            console.log('📧 EMAIL SIMULADO (modo test):', {
+                to: reservation.email,
+                subject: `${status === 'confirmed' ? '✅ Reserva Confirmada' : '❌ Reserva Cancelada'} - Café Aroma #${reservation.id}`,
+                message: `Email enviado a ${reservation.name} (${reservation.email}) sobre reserva para ${reservation.date} a las ${reservation.time}`
+            });
+            
+            return {
+                success: true,
+                messageId: 'test-' + Date.now(),
+                to: reservation.email,
+                subject: `${status === 'confirmed' ? '✅ Reserva Confirmada' : '❌ Reserva Cancelada'} - Café Aroma #${reservation.id}`,
+                mode: 'test'
+            };
+        }
+
         if (!this.transporter) {
             throw new Error('Servicio de email no inicializado');
         }
@@ -378,6 +414,24 @@ Gracias por elegir ${restaurantName}
     }
 
     async sendContactReply(contact, message) {
+        // En modo test, simular envío exitoso
+        if (process.env.EMAIL_SERVICE === 'test') {
+            console.log('📧 RESPUESTA CONTACTO SIMULADA (modo test):', {
+                to: contact.email,
+                subject: `Re: Tu mensaje en Café Aroma`,
+                from: contact.name,
+                originalSubject: contact.subject,
+                reply: message
+            });
+            
+            return {
+                success: true,
+                messageId: 'test-reply-' + Date.now(),
+                to: contact.email,
+                mode: 'test'
+            };
+        }
+
         if (!this.transporter) {
             throw new Error('Servicio de email no inicializado');
         }

@@ -1,0 +1,57 @@
+# ==========================================
+# CONFIGURACIÓN COMPLETA DE EMAIL
+# ==========================================
+
+# OPCIÓN 1: MODO TEST (para desarrollo - actual)
+EMAIL_SERVICE=test
+EMAIL_USER=test@cafearoma.com
+EMAIL_PASSWORD=test_password
+
+# OPCIÓN 2: GMAIL (gratis para envíos limitados)
+# Pasos para configurar Gmail:
+# 1. Activa "Verificación en 2 pasos" en tu cuenta Gmail
+# 2. Genera una "Contraseña de aplicación" específica
+# 3. Usa esa contraseña aquí (no tu contraseña normal)
+# EMAIL_SERVICE=gmail
+# EMAIL_USER=tu-email@gmail.com
+# EMAIL_PASSWORD=tu-contraseña-de-aplicacion-de-16-caracteres
+
+# OPCIÓN 3: OUTLOOK/HOTMAIL (gratis)
+# EMAIL_SERVICE=outlook
+# EMAIL_USER=tu-email@outlook.com
+# EMAIL_PASSWORD=tu-contraseña-outlook
+
+# OPCIÓN 4: SENDGRID (profesional, primeros emails gratis)
+# Regístrate en sendgrid.com y obtén tu API key
+# EMAIL_SERVICE=sendgrid
+# SENDGRID_API_KEY=tu-api-key-de-sendgrid
+
+# OPCIÓN 5: ETHEREAL (solo para testing - emails se ven en web)
+# EMAIL_SERVICE=ethereal
+# (Las credenciales se generan automáticamente)
+
+# CONFIGURACIÓN GENERAL
+EMAIL_FROM_NAME=Café Aroma
+EMAIL_FROM_ADDRESS=info@cafearoma.com
+
+# ==========================================
+# INSTRUCCIONES DE CONFIGURACIÓN
+# ==========================================
+
+# PARA GMAIL:
+# 1. Ve a https://myaccount.google.com/security
+# 2. Activa "Verificación en 2 pasos"
+# 3. Ve a "Contraseñas de aplicaciones"
+# 4. Selecciona "Correo" y "Otro"
+# 5. Escribe "Cafe Aroma"
+# 6. Copia la contraseña de 16 caracteres generada
+# 7. Pégala en EMAIL_PASSWORD
+
+# PARA SENDGRID (más profesional):
+# 1. Regístrate en https://sendgrid.com/
+# 2. Ve a Settings > API Keys
+# 3. Crea una nueva API Key con permisos de "Mail Send"
+# 4. Copia el API Key y pégalo en SENDGRID_API_KEY
+
+# PARA OUTLOOK:
+# Solo usa tu email y contraseña normal de Outlook/Hotmail
