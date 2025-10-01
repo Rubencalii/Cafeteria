@@ -1,0 +1,279 @@
+================================================================================
+                    🍃 CAFÉ AROMA - GUÍA DE USO PARA EL PROPIETARIO
+================================================================================
+
+📋 MANUAL DE USUARIO PARA EL DUEÑO DE LA CAFETERÍA
+Esta guía explica cómo usar su página web para administrar su negocio diariamente.
+
+================================================================================
+🌐 CÓMO ACCEDER A SU PÁGINA WEB
+================================================================================
+
+SU PÁGINA WEB TIENE 2 PARTES:
+
+1. PÁGINA PÚBLICA (Para sus clientes):
+   • URL: http://localhost:8000/index.php
+   • Los clientes ven su menú, hacen reservas y envían mensajes
+   • Funciona 24/7 automáticamente
+
+2. PANEL DE ADMINISTRACIÓN (Solo para usted):
+   • URL: http://localhost:8000/admin.php
+   • Usuario: admin
+   • Contraseña: admin123
+   • Aquí controla todo su negocio
+
+🔒 IMPORTANTE: Cambie estas credenciales por seguridad:
+- Usuario: [su nombre de usuario preferido]
+- Contraseña: [una contraseña segura de al menos 8 caracteres]
+
+================================================================================
+🎛️ CÓMO USAR EL PANEL DE ADMINISTRACIÓN
+================================================================================
+
+DESPUÉS DE INICIAR SESIÓN VERÁ 4 SECCIONES:
+
+📊 1. DASHBOARD (Resumen General)
+   --------------------------------
+   AL ENTRAR VERÁ:
+   • Total de reservas recibidas
+   • Reservas para hoy
+   • Mensajes pendientes de responder
+   • Elementos disponibles en el menú
+
+   ¿QUÉ HACER AQUÍ?
+   → Revisar diariamente para ver el estado de su negocio
+   → Ver si hay reservas nuevas o mensajes urgentes
+
+📅 2. GESTIÓN DE RESERVAS
+   ----------------------
+   AQUÍ VE TODAS LAS RESERVAS DE SUS CLIENTES:
+
+   INFORMACIÓN DE CADA RESERVA:
+   • Nombre del cliente
+   • Email y teléfono
+   • Fecha y hora solicitada
+   • Número de personas
+   • Estado: Pendiente/Confirmada/Cancelada
+
+   ACCIONES QUE PUEDE HACER:
+   ✅ CONFIRMAR RESERVA → Clic en "Confirmar"
+   ❌ CANCELAR RESERVA → Clic en "Cancelar"
+   
+   FILTROS DISPONIBLES:
+   • Ver todas las reservas
+   • Solo pendientes (las que necesita revisar)
+   • Solo confirmadas (las que ya aceptó)
+   • Solo canceladas
+
+   📋 RUTINA DIARIA RECOMENDADA:
+   1. Entre cada mañana al panel
+   2. Revise reservas pendientes
+   3. Confirme las que puede atender
+   4. Cancele si no tiene disponibilidad
+   5. Llame o envíe email al cliente para confirmar
+
+📧 3. MENSAJES DE CONTACTO
+   ------------------------
+   AQUÍ VE TODOS LOS MENSAJES DE SUS CLIENTES:
+
+   TIPOS DE MENSAJES QUE RECIBIRÁ:
+   • Consultas sobre horarios
+   • Preguntas sobre el menú
+   • Solicitudes especiales
+   • Felicitaciones o quejas
+   • Consultas sobre eventos privados
+
+   ESTADOS DE MENSAJES:
+   • No leído (nuevos mensajes)
+   • Leído (ya los vio)
+   • Respondido (ya contestó al cliente)
+
+   ACCIONES:
+   ✅ "Marcar Leído" → Cuando haya leído el mensaje
+   ✅ "Respondido" → Cuando ya haya contestado al cliente
+
+   📋 RUTINA DIARIA RECOMENDADA:
+   1. Revise mensajes no leídos
+   2. Responda por email o teléfono al cliente
+   3. Marque como "Respondido" una vez que conteste
+
+🍽️ 4. GESTIÓN DEL MENÚ
+   --------------------
+   AQUÍ CONTROLA QUÉ SE MUESTRA EN SU PÁGINA WEB:
+
+   PARA CADA ELEMENTO DEL MENÚ VE:
+   • Nombre del producto
+   • Categoría (Café Caliente, Café Frío, Postres, Desayunos)
+   • Precio actual
+   • Si está disponible o no
+
+   ACCIONES QUE PUEDE HACER:
+   ✏️ EDITAR → Cambiar nombre, descripción, precio
+   🔄 ACTIVAR/DESACTIVAR → Si se agotó un producto
+   ➕ AGREGAR NUEVO → Para productos nuevos
+   🗑️ ELIMINAR → Para productos que ya no vende
+
+   💡 CASOS DE USO COMUNES:
+   
+   ➤ SE AGOTÓ EL TIRAMISÚ:
+   1. Busque "Tiramisú" en la tabla
+   2. Clic en "Desactivar"
+   3. Ya no aparecerá en la página para clientes
+   4. Cuando tenga nuevamente, clic en "Activar"
+
+   ➤ SUBIÓ EL PRECIO DEL CAFÉ:
+   1. Busque el producto en la tabla
+   2. Clic en "Editar"
+   3. Cambie el precio
+   4. Guarde los cambios
+   5. El nuevo precio aparece inmediatamente en la web
+
+   ➤ NUEVO PRODUCTO ESPECIAL:
+   1. Clic en "Agregar Elemento"
+   2. Llene: Nombre, Descripción, Precio, Categoría
+   3. Guarde
+   4. Aparece inmediatamente en su página web
+
+================================================================================
+📱 LO QUE VEN SUS CLIENTES EN LA PÁGINA WEB
+================================================================================
+
+SUS CLIENTES PUEDEN:
+
+🍽️ VER SU MENÚ ACTUALIZADO:
+   • Todos los productos que usted tiene activos
+   • Precios actuales
+   • Descripciones completas
+   • Filtrar por categoría (café, postres, etc.)
+
+📅 HACER RESERVAS ONLINE:
+   • Llenan formulario con sus datos
+   • Escogen fecha, hora y número de personas
+   • Las reservas llegan automáticamente a su panel
+   • Aparecen como "Pendientes" hasta que usted las confirme
+
+📧 ENVIAR MENSAJES:
+   • Pueden hacer consultas
+   • Pedir información
+   • Reportar problemas
+   • Felicitar por el servicio
+
+📍 VER INFORMACIÓN DEL CAFÉ:
+   • Su dirección: Av. Reforma 123, CDMX
+   • Teléfonos: +52 555 123 4567
+   • Horarios: Lun-Vie 7:00-22:00, Sáb-Dom 8:00-23:00
+   • Email: info@cafearoma.com
+
+================================================================================
+⏰ RUTINA DIARIA RECOMENDADA PARA EL DUEÑO
+================================================================================
+
+🌅 CADA MAÑANA (15 minutos):
+1. Abra su panel: http://localhost:8000/admin.php
+2. Revise el Dashboard para ver resumen
+3. Vaya a "Reservas" → Confirme reservas del día
+4. Vaya a "Mensajes" → Responda mensajes nuevos
+5. Si algún producto se agotó → Desactívelo en "Menú"
+
+🌆 CADA TARDE (5 minutos):
+1. Revise si hay reservas nuevas para mañana
+2. Responda mensajes pendientes
+3. Active productos que volvieron a estar disponibles
+
+📅 CADA SEMANA:
+1. Revise estadísticas en Dashboard
+2. Actualice precios si es necesario
+3. Agregue productos nuevos de temporada
+4. Revise que toda la información esté actualizada
+
+================================================================================
+💡 CONSEJOS PARA MAXIMIZAR SU NEGOCIO
+================================================================================
+
+🎯 PARA AUMENTAR RESERVAS:
+• Confirme reservas rápidamente (mismo día)
+• Responda mensajes en menos de 24 horas
+• Mantenga su menú siempre actualizado
+• Desactive productos agotados inmediatamente
+
+📈 PARA MEJORAR LA EXPERIENCIA:
+• Use mensajes personalizados al confirmar reservas
+• Agregue productos especiales frecuentemente
+• Responda consultas con información detallada
+• Mantenga horarios y contacto actualizados
+
+💰 PARA OPTIMIZAR PRECIOS:
+• Revise precios mensualmente en la sección "Menú"
+• Compare con competencia
+• Ajuste según temporada o costo de ingredientes
+• Los cambios se reflejan inmediatamente
+
+================================================================================
+🆘 PROBLEMAS COMUNES Y SOLUCIONES
+================================================================================
+
+❌ PROBLEMA: "No puedo entrar al panel"
+✅ SOLUCIÓN: Verifique usuario: admin, contraseña: admin123
+
+❌ PROBLEMA: "Los clientes dicen que no ven un producto"
+✅ SOLUCIÓN: Vaya a Menú → Busque el producto → Verifique que esté "Activado"
+
+❌ PROBLEMA: "No me llegan reservas"
+✅ SOLUCIÓN: Las reservas aparecen en tiempo real en su panel de "Reservas"
+
+❌ PROBLEMA: "Cambié un precio pero no se ve"
+✅ SOLUCIÓN: Los cambios son inmediatos, pida al cliente que recargue la página
+
+❌ PROBLEMA: "Muchas reservas sin confirmar"
+✅ SOLUCIÓN: Revise diariamente y confirme/cancele según disponibilidad
+
+================================================================================
+📞 INFORMACIÓN DE CONTACTO ACTUAL EN SU WEB
+================================================================================
+
+SUS CLIENTES VEN ESTA INFORMACIÓN:
+• Dirección: Av. Reforma 123, Col. Centro, Ciudad de México, CDMX
+• Teléfono principal: +52 555 123 4567
+• Teléfono secundario: +52 555 765 4321
+• Email general: info@cafearoma.com
+• Email reservas: reservas@cafearoma.com
+• Horarios: Lunes-Viernes 7:00 AM - 10:00 PM
+           Sábados-Domingos 8:00 AM - 11:00 PM
+
+🔧 SI NECESITA CAMBIAR ALGÚN DATO:
+Contacte a su desarrollador web para actualizar esta información.
+
+================================================================================
+✅ LISTA DE VERIFICACIÓN DIARIA
+================================================================================
+
+CADA DÍA, VERIFIQUE:
+□ ¿Hay reservas pendientes que confirmar?
+□ ¿Hay mensajes sin responder?
+□ ¿Todos los productos disponibles están activos?
+□ ¿Los productos agotados están desactivados?
+□ ¿Los precios están actualizados?
+
+CADA SEMANA, VERIFIQUE:
+□ ¿Las estadísticas muestran crecimiento?
+□ ¿Hay productos que no se venden que debería eliminar?
+□ ¿Hay oportunidades para nuevos productos?
+□ ¿La información de contacto sigue siendo correcta?
+
+================================================================================
+🎉 ¡FELICIDADES!
+================================================================================
+
+Su página web está trabajando 24/7 para su negocio:
+• Recibe reservas automáticamente
+• Muestra su menú actualizado
+• Permite a clientes contactarlo fácilmente
+• Le da control total desde el panel administrativo
+
+Con 15 minutos al día de mantenimiento, tendrá un sistema completo de gestión
+para su cafetería que mejorará la experiencia de sus clientes y aumentará
+sus ventas.
+
+¡Su Café Aroma está listo para crecer!
+
+================================================================================

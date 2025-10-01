@@ -1,0 +1,54 @@
+RewriteEngine On
+RewriteBase /
+
+# Habilitar CORS
+Header always set Access-Control-Allow-Origin "*"
+Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+
+# Manejar solicitudes OPTIONS (preflight)
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]
+
+# Rutas de la API PHP
+RewriteRule ^api/auth/?(.*)$ php/api/auth.php [L,QSA]
+RewriteRule ^api/reservations/?(.*)$ php/api/reservations.php [L,QSA]
+RewriteRule ^api/contact/?(.*)$ php/api/contact.php [L,QSA]
+RewriteRule ^api/menu/?(.*)$ php/api/menu.php [L,QSA]
+
+# Páginas principales
+RewriteRule ^admin/?$ admin.php [L]
+RewriteRule ^index/?$ index.php [L]
+
+# Directorio por defecto
+DirectoryIndex index.php index.html
+
+# Configuración de seguridad
+Options -Indexes
+ServerSignature Off
+
+# Configuración de PHP
+php_flag display_errors On
+php_value error_reporting "E_ALL"
+php_value post_max_size 10M
+php_value upload_max_filesize 10M
+php_value max_execution_time 30
+php_value memory_limit 128M
+
+# Configuración de sesiones PHP
+php_value session.cookie_httponly 1
+php_value session.use_strict_mode 1
+php_value session.cookie_secure 0
+php_value session.gc_maxlifetime 3600
+
+# Protección contra ataques
+<Files ~ "\.sqlite$">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Protección de archivos de configuración
+<Files ~ "\.(ini|conf|config)$">
+    Order allow,deny
+    Deny from all
+</Files>
