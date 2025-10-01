@@ -104,6 +104,19 @@ function setupEventListeners() {
     if (hoursForm) {
         hoursForm.addEventListener('submit', handleHoursSubmit);
     }
+    
+    // Listener para cambios en localStorage
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'reservations' || e.key === 'contactMessages') {
+            console.log('Detectado cambio en localStorage, actualizando estadísticas...');
+            updateDashboardStats();
+        }
+    });
+    
+    // Verificar periódicamente cambios en localStorage (para la misma pestaña)
+    setInterval(() => {
+        updateDashboardStats();
+    }, 5000); // Actualizar cada 5 segundos
 }
 
 // ==========================================
@@ -124,36 +137,46 @@ async function handleLogin(e) {
     
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Iniciando sesión...';
     submitBtn.disabled = true;
-    errorDiv.style.display = 'none';
+    if (errorDiv) errorDiv.style.display = 'none';
     
     try {
-        const response = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(loginData)
-        });
+        // Sistema de login estático para demo
+        const validCredentials = {
+            email: 'admin@cafearoma.com',
+            password: 'admin123'
+        };
         
-        const result = await response.json();
+        // Simular delay de red
+        await new Promise(resolve => setTimeout(resolve, 800));
         
-        if (result.success && result.data.user.role === 'admin') {
-            authToken = result.data.token;
-            currentUser = result.data.user;
+        console.log('Intentando login con:', loginData);
+        console.log('Credenciales válidas:', validCredentials);
+        
+        if (loginData.email === validCredentials.email && loginData.password === validCredentials.password) {
+            authToken = 'demo-token-' + Date.now();
+            currentUser = {
+                id: 1,
+                name: 'Administrador',
+                username: 'admin',
+                email: 'admin@cafearoma.com',
+                role: 'admin'
+            };
             
             localStorage.setItem('authToken', authToken);
             localStorage.setItem('user', JSON.stringify(currentUser));
             
             showDashboard();
-            loadDashboardData();
+            loadDashboardDataStatic();
             showToast('Inicio de sesión exitoso', 'success');
         } else {
-            throw new Error(result.message || 'Credenciales inválidas o sin permisos de administrador');
+            throw new Error('Credenciales incorrectas. Intente con: admin@cafearoma.com / admin123');
         }
     } catch (error) {
         console.error('Error en login:', error);
-        errorDiv.textContent = error.message;
-        errorDiv.style.display = 'block';
+        if (errorDiv) {
+            errorDiv.textContent = error.message;
+            errorDiv.style.display = 'block';
+        }
     } finally {
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
@@ -290,36 +313,103 @@ function togglePassword() {
 // ==========================================
 // DASHBOARD
 // ==========================================
-async function loadDashboardData() {
+async function loadDashboardDataStatic() {
     try {
-        // Cargar estadísticas
-        const [menuData, reservationsData, contactsData] = await Promise.all([
-            apiRequest('/api/menu'),
-            apiRequest('/api/reservations'),
-            apiRequest('/api/contact')
-        ]);
+        // Datos estáticos para demo - completamente funcional sin backend
+        const menuData = {
+            success: true,
+            data: [
+                {id: 1, name: "Café Americano", price: 2.50, category: "Café Caliente", available: true},
+                {id: 2, name: "Cappuccino", price: 3.50, category: "Café Caliente", available: true},
+                {id: 3, name: "Latte Macchiato", price: 4.00, category: "Café Caliente", available: true},
+                {id: 4, name: "Café Frappé", price: 4.50, category: "Café Frío", available: true},
+                {id: 5, name: "Cold Brew", price: 3.80, category: "Café Frío", available: true},
+                {id: 6, name: "Tostada de Aguacate", price: 6.50, category: "Desayunos", available: true},
+                {id: 7, name: "Croissant de Almendra", price: 3.20, category: "Postres", available: true},
+                {id: 8, name: "Cheesecake", price: 5.50, category: "Postres", available: true},
+                {id: 9, name: "Bowl de Açaí", price: 7.80, category: "Desayunos", available: true}
+            ]
+        };
         
-        // Actualizar estadísticas del overview
-        if (menuData.success) {
-            document.getElementById('totalMenuItems').textContent = menuData.data.length || 0;
+        const today = new Date().toISOString().split('T')[0];
+        const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+        
+        const reservationsData = {
+            success: true,
+            data: [
+                {id: 1, name: "Juan Pérez", email: "juan@email.com", date: today, time: "19:00", guests: 2, status: "confirmed", phone: "+34 666 123 456"},
+                {id: 2, name: "María García", email: "maria@email.com", date: today, time: "20:30", guests: 4, status: "pending", phone: "+34 777 234 567"},
+                {id: 3, name: "Carlos López", email: "carlos@email.com", date: tomorrow, time: "18:00", guests: 3, status: "confirmed", phone: "+34 888 345 678"},
+                {id: 4, name: "Ana Martín", email: "ana@email.com", date: tomorrow, time: "21:00", guests: 2, status: "confirmed", phone: "+34 999 456 789"}
+            ]
+        };
+        
+        const contactsData = {
+            success: true,
+            data: [
+                {id: 1, name: "Pedro Ruiz", email: "pedro@email.com", message: "¡Excelente servicio! Volveré pronto.", status: "new", date: new Date().toISOString(), phone: "+34 111 222 333"},
+                {id: 2, name: "Laura Sánchez", email: "laura@email.com", message: "¿Tienen opciones veganas?", status: "new", date: new Date().toISOString(), phone: "+34 222 333 444"},
+                {id: 3, name: "Miguel Torres", email: "miguel@email.com", message: "Felicitaciones por la nueva ubicación", status: "read", date: new Date(Date.now() - 86400000).toISOString(), phone: "+34 333 444 555"}
+            ]
+        };
+        
+        // Actualizar estadísticas del overview con animación
+        if (document.getElementById('totalMenuItems')) {
+            animateNumber(document.getElementById('totalMenuItems'), menuData.data.length);
         }
         
-        if (reservationsData.success) {
-            const today = new Date().toISOString().split('T')[0];
+        if (document.getElementById('totalReservations')) {
             const todayReservations = reservationsData.data.filter(r => r.date === today);
-            document.getElementById('totalReservations').textContent = todayReservations.length || 0;
+            animateNumber(document.getElementById('totalReservations'), todayReservations.length);
         }
         
-        if (contactsData.success) {
+        if (document.getElementById('todayReservations')) {
+            const todayReservations = reservationsData.data.filter(r => r.date === today);
+            animateNumber(document.getElementById('todayReservations'), todayReservations.length);
+        }
+        
+        if (document.getElementById('totalMessages')) {
             const newMessages = contactsData.data.filter(c => c.status === 'new');
-            document.getElementById('totalMessages').textContent = newMessages.length || 0;
+            animateNumber(document.getElementById('totalMessages'), newMessages.length);
         }
         
-        // Simular ingresos mensuales (esto debería venir de una API real)
-        document.getElementById('monthlyRevenue').textContent = '$12,350';
+        if (document.getElementById('monthlyRevenue')) {
+            document.getElementById('monthlyRevenue').textContent = '€12,350';
+        }
         
-        // Cargar actividad reciente
-        await loadRecentActivity();
+        // Cargar actividad reciente con datos estáticos
+        loadRecentActivityStatic(reservationsData.data, contactsData.data);
+        
+        // Cargar historial de acciones
+        loadActionHistoryWidget();
+        
+        // Obtener datos adicionales del localStorage
+        const savedReservations = JSON.parse(localStorage.getItem('reservations') || '[]');
+        const savedMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+        
+        // Combinar datos estáticos con datos del localStorage
+        const allReservations = [...reservationsData.data, ...savedReservations];
+        const allContacts = [...contactsData.data, ...savedMessages];
+        
+        // Actualizar estadísticas con datos combinados
+        if (document.getElementById('totalReservations')) {
+            const todayReservations = allReservations.filter(r => r.date === today);
+            animateNumber(document.getElementById('totalReservations'), todayReservations.length);
+        }
+        
+        if (document.getElementById('totalMessages')) {
+            const newMessages = allContacts.filter(c => c.status === 'new');
+            animateNumber(document.getElementById('totalMessages'), newMessages.length);
+        }
+        
+        // Almacenar datos combinados para otras funciones
+        window.staticData = {
+            menu: menuData.data,
+            reservations: allReservations,
+            contacts: allContacts
+        };
+        
+        console.log('Dashboard cargado exitosamente con datos estáticos');
         
     } catch (error) {
         console.error('Error cargando dashboard:', error);
@@ -327,51 +417,79 @@ async function loadDashboardData() {
     }
 }
 
-async function loadRecentActivity() {
+// Función para animar números
+function animateNumber(element, target) {
+    let current = 0;
+    const increment = target / 20;
+    const timer = setInterval(() => {
+        current += increment;
+        if (current >= target) {
+            current = target;
+            clearInterval(timer);
+        }
+        element.textContent = Math.floor(current);
+    }, 50);
+}
+
+async function loadDashboardData() {
+    // Redirigir a la función estática
+    return loadDashboardDataStatic();
+}
+
+function loadRecentActivityStatic(reservations, contacts) {
     try {
-        const recentReservations = await apiRequest('/api/reservations?limit=5');
-        const recentContacts = await apiRequest('/api/contact?limit=5');
-        
         const activityContainer = document.getElementById('recentActivity');
-        let activityHTML = '<h4>Reservas Recientes</h4>';
+        if (!activityContainer) return;
         
-        if (recentReservations.success && recentReservations.data.reservations.length > 0) {
-            activityHTML += '<ul>';
-            recentReservations.data.reservations.forEach(reservation => {
+        let activityHTML = '<h4>Actividad Reciente</h4>';
+        
+        // Mostrar reservas recientes (últimas 3)
+        const recentReservations = reservations.slice(0, 3);
+        if (recentReservations.length > 0) {
+            activityHTML += '<div class="activity-section"><h5>📅 Reservas Recientes</h5><ul>';
+            recentReservations.forEach(reservation => {
                 activityHTML += `
-                    <li>
-                        <strong>${reservation.name}</strong> - ${formatDate(reservation.date)} ${reservation.time}
+                    <li class="activity-item">
+                        <div class="activity-content">
+                            <strong>${reservation.name}</strong> - ${formatDate(reservation.date)} ${reservation.time}
+                            <br><small>${reservation.guests} personas</small>
+                        </div>
                         <span class="status-badge status-${reservation.status}">${getStatusText(reservation.status)}</span>
                     </li>
                 `;
             });
-            activityHTML += '</ul>';
-        } else {
-            activityHTML += '<p>No hay reservas recientes</p>';
+            activityHTML += '</ul></div>';
         }
         
-        activityHTML += '<h4 style="margin-top: 20px;">Mensajes Recientes</h4>';
-        
-        if (recentContacts.success && recentContacts.data.contacts.length > 0) {
-            activityHTML += '<ul>';
-            recentContacts.data.contacts.forEach(contact => {
+        // Mostrar mensajes recientes (últimos 2)
+        const recentContacts = contacts.slice(0, 2);
+        if (recentContacts.length > 0) {
+            activityHTML += '<div class="activity-section"><h5>💬 Mensajes Recientes</h5><ul>';
+            recentContacts.forEach(contact => {
                 activityHTML += `
-                    <li>
-                        <strong>${contact.name}</strong> - ${contact.subject}
-                        <span class="status-badge status-${contact.status}">${getContactStatusText(contact.status)}</span>
+                    <li class="activity-item">
+                        <div class="activity-content">
+                            <strong>${contact.name}</strong>
+                            <br><small>${contact.message.substring(0, 50)}...</small>
+                        </div>
+                        <span class="status-badge status-${contact.status}">${contact.status === 'new' ? 'Nuevo' : 'Leído'}</span>
                     </li>
                 `;
             });
-            activityHTML += '</ul>';
-        } else {
-            activityHTML += '<p>No hay mensajes recientes</p>';
+            activityHTML += '</ul></div>';
         }
         
         activityContainer.innerHTML = activityHTML;
         
     } catch (error) {
-        console.error('Error cargando actividad:', error);
-        document.getElementById('recentActivity').innerHTML = '<p>Error cargando actividad reciente</p>';
+        console.error('Error cargando actividad reciente:', error);
+    }
+}
+
+async function loadRecentActivity() {
+    // Redirigir a función estática si no hay datos globales
+    if (window.staticData) {
+        loadRecentActivityStatic(window.staticData.reservations, window.staticData.contacts);
     }
 }
 
@@ -382,24 +500,40 @@ async function loadReservations(page = 1) {
     try {
         showLoading(true);
         
-        const status = document.getElementById('reservationStatusFilter').value;
-        const params = new URLSearchParams({
-            page: page.toString(),
-            limit: '10'
+        // Cargar reservas del localStorage (las que se crean desde el sitio web)
+        const savedReservations = JSON.parse(localStorage.getItem('reservations') || '[]');
+        
+        // Combinar con datos estáticos del sistema
+        const staticReservations = window.staticData ? window.staticData.reservations : [];
+        
+        // Fusionar todas las reservas
+        const allReservations = [...staticReservations, ...savedReservations];
+        
+        // Filtrar por estado si se especifica
+        const statusFilter = document.getElementById('reservationStatusFilter')?.value || 'all';
+        let filteredReservations = allReservations;
+        
+        if (statusFilter !== 'all') {
+            filteredReservations = allReservations.filter(r => r.status === statusFilter);
+        }
+        
+        // Ordenar por fecha (más recientes primero)
+        filteredReservations.sort((a, b) => {
+            const dateA = new Date(a.date + ' ' + (a.time || '00:00'));
+            const dateB = new Date(b.date + ' ' + (b.time || '00:00'));
+            return dateB - dateA;
         });
         
-        if (status !== 'all') {
-            params.append('status', status);
-        }
+        // Simular paginación simple
+        const limit = 10;
+        const start = (page - 1) * limit;
+        const paginatedReservations = filteredReservations.slice(start, start + limit);
         
-        const response = await apiRequest(`/api/reservations?${params}`);
+        displayReservations(paginatedReservations);
         
-        if (response.success) {
-            displayReservations(response.data.reservations);
-            displayPagination('reservationsPagination', response.data.pagination, loadReservations);
-        } else {
-            throw new Error(response.message);
-        }
+        // Mostrar información de paginación simple
+        const totalPages = Math.ceil(filteredReservations.length / limit);
+        console.log(`Mostrando página ${page} de ${totalPages} (Total: ${filteredReservations.length} reservas)`);
         
     } catch (error) {
         console.error('Error cargando reservas:', error);
@@ -492,17 +626,51 @@ async function viewReservation(id) {
 
 async function updateReservationStatus(id, status) {
     try {
-        const response = await apiRequest(`/api/reservations/${id}/status`, {
-            method: 'PATCH',
-            body: JSON.stringify({ status })
-        });
+        // Buscar la reserva en localStorage
+        const savedReservations = JSON.parse(localStorage.getItem('reservations') || '[]');
+        const reservationIndex = savedReservations.findIndex(r => r.id === id);
         
-        if (response.success) {
-            showNotification(response.message, 'success');
+        let reservation = null;
+        
+        if (reservationIndex !== -1) {
+            // Actualizar reserva en localStorage
+            savedReservations[reservationIndex].status = status;
+            savedReservations[reservationIndex].updatedAt = new Date().toISOString();
+            localStorage.setItem('reservations', JSON.stringify(savedReservations));
+            reservation = savedReservations[reservationIndex];
+        } else {
+            // Buscar en datos estáticos y crear copia para localStorage
+            const staticReservations = window.staticData?.reservations || [];
+            const staticReservation = staticReservations.find(r => r.id === id);
+            
+            if (staticReservation) {
+                reservation = {
+                    ...staticReservation,
+                    status: status,
+                    updatedAt: new Date().toISOString()
+                };
+                savedReservations.push(reservation);
+                localStorage.setItem('reservations', JSON.stringify(savedReservations));
+            }
+        }
+        
+        if (reservation) {
+            // Enviar notificación por email
+            await sendReservationEmail(reservation, status);
+            
+            // Actualizar historial de acciones
+            logReservationAction(reservation.id, status, currentUser.name);
+            
+            // Actualizar interfaz
+            const statusText = status === 'confirmed' ? 'confirmada' : 'rechazada';
+            showNotification(`Reserva ${statusText} exitosamente`, 'success');
             loadReservations();
             closeModal('reservationModal');
+            
+            // Actualizar estadísticas
+            updateDashboardStats();
         } else {
-            throw new Error(response.message);
+            throw new Error('Reserva no encontrada');
         }
     } catch (error) {
         console.error('Error actualizando reserva:', error);
@@ -534,13 +702,20 @@ async function loadMenu() {
     try {
         showLoading(true);
         
-        const response = await apiRequest('/api/menu/admin');
+        // Usar datos estáticos del menú
+        const menuData = window.staticData ? window.staticData.menu : [
+            {id: 1, name: "Café Americano", price: 2.50, category: "Café Caliente", available: true, description: "Café negro clásico"},
+            {id: 2, name: "Cappuccino", price: 3.50, category: "Café Caliente", available: true, description: "Café con leche vaporizada"},
+            {id: 3, name: "Latte Macchiato", price: 4.00, category: "Café Caliente", available: true, description: "Capas perfectas de café y leche"},
+            {id: 4, name: "Café Frappé", price: 4.50, category: "Café Frío", available: true, description: "Bebida helada refrescante"},
+            {id: 5, name: "Cold Brew", price: 3.80, category: "Café Frío", available: true, description: "Café extraído en frío"},
+            {id: 6, name: "Tostada de Aguacate", price: 6.50, category: "Desayunos", available: true, description: "Pan tostado con aguacate fresco"},
+            {id: 7, name: "Croissant de Almendra", price: 3.20, category: "Postres", available: true, description: "Croissant hojaldrado relleno"},
+            {id: 8, name: "Cheesecake", price: 5.50, category: "Postres", available: true, description: "Tarta de queso cremosa"},
+            {id: 9, name: "Bowl de Açaí", price: 7.80, category: "Desayunos", available: true, description: "Bowl energético con frutas"}
+        ];
         
-        if (response.success) {
-            displayMenu(response.data);
-        } else {
-            throw new Error(response.message);
-        }
+        displayMenu(menuData);
         
     } catch (error) {
         console.error('Error cargando menú:', error);
@@ -715,24 +890,40 @@ async function loadContacts(page = 1) {
     try {
         showLoading(true);
         
-        const status = document.getElementById('contactStatusFilter').value;
-        const params = new URLSearchParams({
-            page: page.toString(),
-            limit: '10'
+        // Cargar mensajes del localStorage (los que se envían desde el sitio web)
+        const savedMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+        
+        // Combinar con mensajes estáticos del sistema
+        const staticMessages = window.staticData ? window.staticData.contacts : [];
+        
+        // Fusionar todos los mensajes
+        const allMessages = [...staticMessages, ...savedMessages];
+        
+        // Filtrar por estado si se especifica
+        const statusFilter = document.getElementById('contactStatusFilter')?.value || 'all';
+        let filteredMessages = allMessages;
+        
+        if (statusFilter !== 'all') {
+            filteredMessages = allMessages.filter(m => m.status === statusFilter);
+        }
+        
+        // Ordenar por fecha (más recientes primero)
+        filteredMessages.sort((a, b) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            return dateB - dateA;
         });
         
-        if (status !== 'all') {
-            params.append('status', status);
-        }
+        // Simular paginación simple
+        const limit = 10;
+        const start = (page - 1) * limit;
+        const paginatedMessages = filteredMessages.slice(start, start + limit);
         
-        const response = await apiRequest(`/api/contact?${params}`);
+        displayContacts(paginatedMessages);
         
-        if (response.success) {
-            displayContacts(response.data.contacts);
-            displayPagination('contactsPagination', response.data.pagination, loadContacts);
-        } else {
-            throw new Error(response.message);
-        }
+        // Mostrar información de paginación simple
+        const totalPages = Math.ceil(filteredMessages.length / limit);
+        console.log(`Mostrando página ${page} de ${totalPages} (Total: ${filteredMessages.length} mensajes)`);
         
     } catch (error) {
         console.error('Error cargando contactos:', error);
@@ -890,16 +1081,70 @@ async function handleSettingsUpdate(e) {
 // UTILIDADES
 // ==========================================
 async function apiRequest(url, options = {}) {
-    const defaultOptions = {
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`
-        },
-        ...options
-    };
+    // Sistema mock - devolver datos estáticos basados en la URL
+    await new Promise(resolve => setTimeout(resolve, 300)); // Simular delay de red
     
-    const response = await fetch(url, defaultOptions);
-    return await response.json();
+    console.log('Mock API llamada a:', url, options);
+    
+    // Datos estáticos basados en la URL solicitada
+    if (url.includes('/api/menu')) {
+        return {
+            success: true,
+            data: window.staticData ? window.staticData.menu : [
+                {id: 1, name: "Café Americano", price: 2.50, category: "Café Caliente", available: true, description: "Café negro clásico"},
+                {id: 2, name: "Cappuccino", price: 3.50, category: "Café Caliente", available: true, description: "Café con leche vaporizada"},
+                {id: 3, name: "Latte Macchiato", price: 4.00, category: "Café Caliente", available: true, description: "Capas perfectas"},
+                {id: 4, name: "Café Frappé", price: 4.50, category: "Café Frío", available: true, description: "Bebida helada"},
+                {id: 5, name: "Tostada de Aguacate", price: 6.50, category: "Desayunos", available: true, description: "Pan con aguacate"}
+            ]
+        };
+    }
+    
+    if (url.includes('/api/reservations')) {
+        // Obtener reservas del localStorage (las nuevas del sitio web)
+        const savedReservations = JSON.parse(localStorage.getItem('reservations') || '[]');
+        
+        // Reservas estáticas por defecto
+        const today = new Date().toISOString().split('T')[0];
+        const staticReservations = [
+            {id: 1, name: "Juan Pérez", email: "juan@email.com", date: today, time: "19:00", guests: 2, status: "confirmed", phone: "+34 666 123 456"},
+            {id: 2, name: "María García", email: "maria@email.com", date: today, time: "20:30", guests: 4, status: "pending", phone: "+34 777 234 567"}
+        ];
+        
+        // Combinar ambas fuentes de datos
+        const allReservations = [...staticReservations, ...savedReservations];
+        
+        return {
+            success: true,
+            data: allReservations
+        };
+    }
+    
+    if (url.includes('/api/contact')) {
+        // Obtener mensajes del localStorage (los nuevos del sitio web)
+        const savedMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+        
+        // Mensajes estáticos por defecto
+        const staticMessages = [
+            {id: 1, name: "Pedro Ruiz", email: "pedro@email.com", message: "¡Excelente servicio! Volveré pronto.", status: "new", date: new Date().toISOString(), phone: "+34 111 222 333"},
+            {id: 2, name: "Laura Sánchez", email: "laura@email.com", message: "¿Tienen opciones veganas en el menú?", status: "new", date: new Date().toISOString(), phone: "+34 222 333 444"}
+        ];
+        
+        // Combinar ambas fuentes de datos
+        const allMessages = [...staticMessages, ...savedMessages];
+        
+        return {
+            success: true,
+            data: allMessages
+        };
+    }
+    
+    // Respuesta por defecto para cualquier otra API
+    return {
+        success: true,
+        message: 'Operación completada exitosamente',
+        data: {}
+    };
 }
 
 function showModal(modalId) {
@@ -928,6 +1173,388 @@ function showLoading(show) {
 }
 
 function showNotification(message, type = 'info', duration = 5000) {
+    // Crear notificación toast
+    console.log(`Notificación [${type}]: ${message}`);
+    showToast(message, type);
+}
+
+function showToast(message, type = 'info') {
+    // Crear elemento toast si no existe
+    let toastContainer = document.querySelector('.toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container';
+        toastContainer.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+        `;
+        document.body.appendChild(toastContainer);
+    }
+    
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.style.cssText = `
+        background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+        color: white;
+        padding: 12px 20px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideInRight 0.3s ease;
+        max-width: 300px;
+    `;
+    toast.textContent = message;
+    
+    toastContainer.appendChild(toast);
+    
+    // Remover después de 4 segundos
+    setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    }, 4000);
+}
+
+// Sistema de notificaciones por email
+async function sendReservationEmail(reservation, status) {
+    try {
+        const emailData = generateEmailTemplate(reservation, status);
+        
+        // Simular envió de email (en un proyecto real, aquí harías la llamada a un servicio de email)
+        console.log('📧 Enviando email a:', reservation.email);
+        console.log('📧 Asunto:', emailData.subject);
+        console.log('📧 Contenido:', emailData.html);
+        
+        // Simular delay del envío
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Guardar registro del email enviado
+        const emailLog = {
+            id: Date.now(),
+            reservationId: reservation.id,
+            to: reservation.email,
+            subject: emailData.subject,
+            status: status,
+            sentAt: new Date().toISOString(),
+            success: true
+        };
+        
+        const emailHistory = JSON.parse(localStorage.getItem('emailHistory') || '[]');
+        emailHistory.push(emailLog);
+        localStorage.setItem('emailHistory', JSON.stringify(emailHistory));
+        
+        // Mostrar preview del email enviado
+        showEmailPreview(emailData, reservation.email);
+        
+        console.log('✅ Email enviado exitosamente');
+        
+    } catch (error) {
+        console.error('❌ Error enviando email:', error);
+        throw error;
+    }
+}
+
+function generateEmailTemplate(reservation, status) {
+    const isConfirmed = status === 'confirmed';
+    const subject = isConfirmed 
+        ? `✅ Reserva Confirmada - Café Aroma #${reservation.id}`
+        : `❌ Reserva Cancelada - Café Aroma #${reservation.id}`;
+    
+    const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            body { font-family: 'Arial', sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: ${isConfirmed ? '#4CAF50' : '#f44336'}; color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 20px; color: #666; }
+            .button { display: inline-block; padding: 12px 24px; background: #6F4E37; color: white; text-decoration: none; border-radius: 5px; margin: 10px 0; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>${isConfirmed ? '🎉 ¡Reserva Confirmada!' : '😔 Reserva Cancelada'}</h1>
+                <p>Café Aroma - Tu lugar especial</p>
+            </div>
+            
+            <div class="content">
+                <h2>Estimado/a ${reservation.name},</h2>
+                
+                ${isConfirmed ? `
+                <p>¡Excelentes noticias! Tu reserva ha sido <strong>confirmada</strong> exitosamente.</p>
+                <p>Te esperamos con los brazos abiertos para brindarte una experiencia gastronómica inolvidable.</p>
+                ` : `
+                <p>Lamentamos informarte que tu reserva ha sido <strong>cancelada</strong>.</p>
+                <p>Esto puede deberse a disponibilidad limitada o circunstancias imprevistas.</p>
+                <p>Te invitamos a realizar una nueva reserva para otra fecha disponible.</p>
+                `}
+                
+                <div class="details">
+                    <h3>📋 Detalles de la Reserva</h3>
+                    <p><strong>Número de Reserva:</strong> #${reservation.id}</p>
+                    <p><strong>Fecha:</strong> ${formatDate(reservation.date)}</p>
+                    <p><strong>Hora:</strong> ${reservation.time}</p>
+                    <p><strong>Número de Personas:</strong> ${reservation.guests}</p>
+                    <p><strong>Estado:</strong> <span style="color: ${isConfirmed ? '#4CAF50' : '#f44336'}; font-weight: bold;">${isConfirmed ? 'CONFIRMADA' : 'CANCELADA'}</span></p>
+                </div>
+                
+                ${isConfirmed ? `
+                <h3>📍 Información Importante</h3>
+                <ul>
+                    <li>Por favor, llega 10 minutos antes de tu hora reservada</li>
+                    <li>Si necesitas cancelar, contáctanos con al menos 2 horas de anticipación</li>
+                    <li>Mantén este email como comprobante de tu reserva</li>
+                </ul>
+                
+                <p><strong>📍 Dirección:</strong> Av. Principal 123, Centro Histórico</p>
+                <p><strong>📞 Teléfono:</strong> +34 900 123 456</p>
+                ` : `
+                <p>Si deseas realizar una nueva reserva, puedes hacerlo a través de nuestro sitio web o contactándonos directamente.</p>
+                <a href="http://localhost:8000" class="button">🌐 Nueva Reserva</a>
+                `}
+                
+                <div class="footer">
+                    <p>Gracias por elegir <strong>Café Aroma</strong></p>
+                    <p>💌 Este email fue enviado automáticamente el ${new Date().toLocaleString('es-ES')}</p>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>`;
+    
+    return { subject, html };
+}
+
+function showEmailPreview(emailData, recipient) {
+    // Crear modal para mostrar preview del email
+    const modal = document.createElement('div');
+    modal.className = 'email-preview-modal';
+    modal.innerHTML = `
+        <div class="email-preview-content">
+            <div class="email-preview-header">
+                <h3>📧 Email Enviado</h3>
+                <button onclick="this.closest('.email-preview-modal').remove()" class="close-btn">&times;</button>
+            </div>
+            <div class="email-info">
+                <p><strong>Para:</strong> ${recipient}</p>
+                <p><strong>Asunto:</strong> ${emailData.subject}</p>
+                <p><strong>Enviado:</strong> ${new Date().toLocaleString('es-ES')}</p>
+            </div>
+            <div class="email-preview-body">
+                <iframe srcdoc="${emailData.html.replace(/"/g, '&quot;')}" style="width: 100%; height: 400px; border: 1px solid #ddd; border-radius: 5px;"></iframe>
+            </div>
+            <div class="email-preview-actions">
+                <button onclick="this.closest('.email-preview-modal').remove()" class="btn btn-primary">Cerrar</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Auto-cerrar después de 10 segundos
+    setTimeout(() => {
+        if (modal.parentNode) {
+            modal.remove();
+        }
+    }, 10000);
+}
+
+// Historial de acciones de reservas
+function logReservationAction(reservationId, action, adminName) {
+    try {
+        const actionLog = {
+            id: Date.now(),
+            reservationId: reservationId,
+            action: action,
+            adminName: adminName,
+            timestamp: new Date().toISOString(),
+            description: `Reserva ${action === 'confirmed' ? 'confirmada' : 'rechazada'} por ${adminName}`
+        };
+        
+        const actionHistory = JSON.parse(localStorage.getItem('reservationActions') || '[]');
+        actionHistory.push(actionLog);
+        localStorage.setItem('reservationActions', JSON.stringify(actionHistory));
+        
+        console.log('📝 Acción registrada:', actionLog);
+        
+    } catch (error) {
+        console.error('Error registrando acción:', error);
+    }
+}
+
+// Función para actualizar estadísticas en tiempo real
+function updateDashboardStats() {
+    try {
+        const savedReservations = JSON.parse(localStorage.getItem('reservations') || '[]');
+        const savedMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+        
+        // Obtener datos estáticos si existen
+        const staticReservations = window.staticData?.reservations || [];
+        const staticMessages = window.staticData?.contacts || [];
+        
+        // Combinar datos
+        const allReservations = [...staticReservations, ...savedReservations];
+        const allMessages = [...staticMessages, ...savedMessages];
+        
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Actualizar contadores si los elementos existen
+        const todayReservations = allReservations.filter(r => r.date === today);
+        const newMessages = allMessages.filter(m => m.status === 'new');
+        
+        // Actualizar contadores por estado de reserva
+        const confirmedReservations = allReservations.filter(r => r.status === 'confirmed');
+        const pendingReservations = allReservations.filter(r => r.status === 'pending');
+        const cancelledReservations = allReservations.filter(r => r.status === 'cancelled');
+        
+        if (document.getElementById('totalReservations')) {
+            document.getElementById('totalReservations').textContent = todayReservations.length;
+        }
+        
+        if (document.getElementById('todayReservations')) {
+            document.getElementById('todayReservations').textContent = todayReservations.length;
+        }
+        
+        if (document.getElementById('totalMessages')) {
+            document.getElementById('totalMessages').textContent = newMessages.length;
+        }
+        
+        // Actualizar estadísticas de reservas
+        if (document.getElementById('confirmedReservations')) {
+            document.getElementById('confirmedReservations').textContent = confirmedReservations.length;
+        }
+        
+        if (document.getElementById('pendingReservations')) {
+            document.getElementById('pendingReservations').textContent = pendingReservations.length;
+        }
+        
+        if (document.getElementById('cancelledReservations')) {
+            document.getElementById('cancelledReservations').textContent = cancelledReservations.length;
+        }
+        
+        console.log(`Estadísticas actualizadas: ${todayReservations.length} reservas hoy, ${newMessages.length} mensajes nuevos`);
+        
+    } catch (error) {
+        console.error('Error actualizando estadísticas:', error);
+    }
+}
+
+// Widget de historial de acciones
+function loadActionHistoryWidget() {
+    try {
+        const actionHistory = JSON.parse(localStorage.getItem('reservationActions') || '[]');
+        const emailHistory = JSON.parse(localStorage.getItem('emailHistory') || '[]');
+        
+        // Combinar y ordenar por fecha más reciente
+        const allActions = [
+            ...actionHistory.map(action => ({
+                ...action,
+                type: 'reservation',
+                icon: action.action === 'confirmed' ? 'fa-check-circle' : 'fa-times-circle',
+                color: action.action === 'confirmed' ? '#4CAF50' : '#F44336'
+            })),
+            ...emailHistory.map(email => ({
+                ...email,
+                type: 'email',
+                icon: 'fa-envelope',
+                color: '#2196F3',
+                description: `Email ${email.status === 'confirmed' ? 'de confirmación' : 'de cancelación'} enviado a ${email.to}`,
+                timestamp: email.sentAt
+            }))
+        ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        
+        // Mostrar últimas 5 acciones
+        const recentActions = allActions.slice(0, 5);
+        
+        const actionsContainer = document.getElementById('recentActionsWidget');
+        if (actionsContainer) {
+            if (recentActions.length === 0) {
+                actionsContainer.innerHTML = `
+                    <div class="no-actions">
+                        <i class="fas fa-history"></i>
+                        <p>No hay acciones recientes</p>
+                    </div>
+                `;
+            } else {
+                actionsContainer.innerHTML = recentActions.map(action => `
+                    <div class="action-item">
+                        <div class="action-icon" style="color: ${action.color}">
+                            <i class="fas ${action.icon}"></i>
+                        </div>
+                        <div class="action-details">
+                            <p class="action-description">${action.description}</p>
+                            <small class="action-time">${formatTimeAgo(action.timestamp)}</small>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        console.log(`📋 Cargadas ${recentActions.length} acciones recientes`);
+        
+    } catch (error) {
+        console.error('Error cargando historial de acciones:', error);
+    }
+}
+
+// Función para formatear tiempo relativo
+function formatTimeAgo(timestamp) {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffInSeconds = Math.floor((now - time) / 1000);
+    
+    if (diffInSeconds < 60) {
+        return 'Hace unos segundos';
+    } else if (diffInSeconds < 3600) {
+        const minutes = Math.floor(diffInSeconds / 60);
+        return `Hace ${minutes} minuto${minutes > 1 ? 's' : ''}`;
+    } else if (diffInSeconds < 86400) {
+        const hours = Math.floor(diffInSeconds / 3600);
+        return `Hace ${hours} hora${hours > 1 ? 's' : ''}`;
+    } else {
+        const days = Math.floor(diffInSeconds / 86400);
+        return `Hace ${days} día${days > 1 ? 's' : ''}`;
+    }
+}
+
+// Funciones auxiliares para fechas y estado
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+    });
+}
+
+function getStatusText(status) {
+    const statusMap = {
+        'confirmed': 'Confirmada',
+        'pending': 'Pendiente',
+        'cancelled': 'Cancelada',
+        'completed': 'Completada',
+        'new': 'Nuevo',
+        'read': 'Leído',
+        'replied': 'Respondido'
+    };
+    return statusMap[status] || status;
+}
+
+function isToday(date) {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+}
+
+function showNotificationBak(message, type = 'info', duration = 5000) {
     // Crear notificación temporal
     const notification = document.createElement('div');
     notification.className = `notification ${type} show`;

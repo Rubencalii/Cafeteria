@@ -259,26 +259,52 @@ function initializeReservationSystem() {
         submitBtn.disabled = true;
         
         try {
-            const response = await fetch('/api/reservations', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(reservationData)
-            });
+            // Simular procesamiento de reserva (sin backend)
+            await new Promise(resolve => setTimeout(resolve, 1500));
             
-            const result = await response.json();
-            
-            if (result.success) {
-                submitBtn.innerHTML = '<i class="fas fa-check"></i> ¡Reserva Confirmada!';
-                submitBtn.style.background = '#28a745';
-                
-                setTimeout(() => {
-                    showReservationConfirmation(reservationData, reservationForm);
-                }, 1000);
-            } else {
-                throw new Error(result.message || 'Error al procesar la reserva');
+            // Validar datos básicos
+            if (!reservationData.name || !reservationData.email || !reservationData.phone || 
+                !reservationData.date || !reservationData.time || !reservationData.guests) {
+                throw new Error('Por favor complete todos los campos obligatorios');
             }
+            
+            // Validar email
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(reservationData.email)) {
+                throw new Error('Por favor ingrese un email válido');
+            }
+            
+            // Validar fecha (no debe ser en el pasado)
+            const selectedDate = new Date(reservationData.date);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (selectedDate < today) {
+                throw new Error('No se pueden hacer reservas para fechas pasadas');
+            }
+            
+            // Simular respuesta exitosa
+            const result = {
+                success: true,
+                message: 'Reserva procesada exitosamente',
+                data: {
+                    ...reservationData,
+                    id: Date.now(),
+                    status: 'confirmed'
+                }
+            };
+            
+            // Guardar reserva en localStorage para demo
+            const existingReservations = JSON.parse(localStorage.getItem('reservations') || '[]');
+            existingReservations.push(result.data);
+            localStorage.setItem('reservations', JSON.stringify(existingReservations));
+            
+            submitBtn.innerHTML = '<i class="fas fa-check"></i> ¡Reserva Confirmada!';
+            submitBtn.style.background = '#28a745';
+            
+            setTimeout(() => {
+                showReservationConfirmation(reservationData, reservationForm);
+            }, 1000);
             
         } catch (error) {
             console.error('Error enviando reserva:', error);
@@ -374,29 +400,49 @@ function initializeContactForm() {
         submitBtn.disabled = true;
         
         try {
-            const response = await fetch('/api/contact', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(contactData)
-            });
+            // Simular envío de mensaje (sin backend)
+            await new Promise(resolve => setTimeout(resolve, 1200));
             
-            const result = await response.json();
-            
-            if (result.success) {
-                submitBtn.textContent = '¡Mensaje enviado!';
-                submitBtn.style.background = '#28a745';
-                
-                setTimeout(() => {
-                    this.reset();
-                    submitBtn.textContent = originalText;
-                    submitBtn.disabled = false;
-                    submitBtn.style.background = '';
-                }, 3000);
-            } else {
-                throw new Error(result.message || 'Error al enviar el mensaje');
+            // Validar datos básicos
+            if (!contactData.name || !contactData.email || !contactData.message) {
+                throw new Error('Por favor complete todos los campos obligatorios');
             }
+            
+            // Validar email
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(contactData.email)) {
+                throw new Error('Por favor ingrese un email válido');
+            }
+            
+            // Simular respuesta exitosa
+            const result = {
+                success: true,
+                message: 'Mensaje enviado exitosamente',
+                data: {
+                    ...contactData,
+                    id: Date.now(),
+                    date: new Date().toISOString(),
+                    status: 'new'
+                }
+            };
+            
+            // Guardar mensaje en localStorage para demo
+            const existingMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+            existingMessages.push(result.data);
+            localStorage.setItem('contactMessages', JSON.stringify(existingMessages));
+            
+            submitBtn.textContent = '¡Mensaje enviado!';
+            submitBtn.style.background = '#28a745';
+            
+            // Mostrar notificación de éxito
+            showSuccessNotification('¡Gracias! Tu mensaje ha sido enviado correctamente. Te responderemos pronto.');
+            
+            setTimeout(() => {
+                this.reset();
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                submitBtn.style.background = '';
+            }, 3000);
             
         } catch (error) {
             console.error('Error enviando mensaje:', error);
@@ -404,15 +450,97 @@ function initializeContactForm() {
             submitBtn.textContent = 'Error al enviar';
             submitBtn.style.background = '#dc3545';
             
+            // Mostrar el error específico al usuario
+            showErrorNotification(error.message || 'Error al enviar el mensaje. Por favor, inténtalo de nuevo.');
+            
             setTimeout(() => {
                 submitBtn.textContent = originalText;
                 submitBtn.style.background = '';
                 submitBtn.disabled = false;
-                
-                alert('Error al enviar el mensaje. Por favor, inténtalo de nuevo.');
             }, 2000);
         }
     });
+}
+
+// ==========================================
+// FUNCIONES DE NOTIFICACIÓN
+// ==========================================
+function showSuccessNotification(message) {
+    showNotification(message, 'success');
+}
+
+function showErrorNotification(message) {
+    showNotification(message, 'error');
+}
+
+function showNotification(message, type = 'info') {
+    // Crear contenedor de notificaciones si no existe
+    let notificationContainer = document.querySelector('.notification-container');
+    if (!notificationContainer) {
+        notificationContainer = document.createElement('div');
+        notificationContainer.className = 'notification-container';
+        notificationContainer.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            max-width: 400px;
+        `;
+        document.body.appendChild(notificationContainer);
+    }
+    
+    // Crear notificación
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    
+    const colors = {
+        success: '#4CAF50',
+        error: '#f44336',
+        info: '#2196F3',
+        warning: '#ff9800'
+    };
+    
+    notification.style.cssText = `
+        background: ${colors[type] || colors.info};
+        color: white;
+        padding: 15px 20px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        animation: slideInFromRight 0.3s ease;
+        cursor: pointer;
+        position: relative;
+        padding-right: 40px;
+    `;
+    
+    notification.innerHTML = `
+        <div style="margin-right: 20px;">${message}</div>
+        <span style="position: absolute; top: 5px; right: 10px; cursor: pointer; font-weight: bold;">&times;</span>
+    `;
+    
+    // Agregar evento para cerrar
+    notification.onclick = () => {
+        notification.style.animation = 'slideOutToRight 0.3s ease';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    };
+    
+    notificationContainer.appendChild(notification);
+    
+    // Auto-remover después de 5 segundos
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.animation = 'slideOutToRight 0.3s ease';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }
+    }, 5000);
 }
 
 // ==========================================
@@ -545,17 +673,77 @@ async function loadDynamicMenu() {
     const menuGrid = document.getElementById('menu-grid');
     if (!menuGrid) return;
     
-    try {
-        const response = await fetch('/api/menu');
-        const result = await response.json();
-        
-        if (result.success) {
-            const items = result.data.items;
-            renderMenuItems(items);
-        } else {
-            throw new Error('Error cargando el menú');
+    // Menú estático para funcionar sin backend
+    const staticMenuItems = [
+        {
+            name: "Café Americano",
+            description: "Café negro clásico, intenso y aromático preparado con nuestros granos seleccionados",
+            price: 2.50,
+            category: "Café Caliente",
+            image: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=300&h=200&fit=crop&crop=center"
+        },
+        {
+            name: "Cappuccino",
+            description: "Café espresso con leche vaporizada y espuma cremosa, decorado con arte latte",
+            price: 3.50,
+            category: "Café Caliente",
+            image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=300&h=200&fit=crop&crop=center"
+        },
+        {
+            name: "Latte Macchiato",
+            description: "Capas perfectas de leche vaporizada, café espresso y espuma sedosa",
+            price: 4.00,
+            category: "Café Caliente",
+            image: "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=300&h=200&fit=crop&crop=center"
+        },
+        {
+            name: "Café Frappé",
+            description: "Bebida helada refrescante con café, hielo y crema batida",
+            price: 4.50,
+            category: "Café Frío",
+            image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=300&h=200&fit=crop&crop=center"
+        },
+        {
+            name: "Cold Brew",
+            description: "Café extraído en frío durante 12 horas, suave y menos ácido",
+            price: 3.80,
+            category: "Café Frío",
+            image: "https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=300&h=200&fit=crop&crop=center"
+        },
+        {
+            name: "Tostada de Aguacate",
+            description: "Pan artesanal tostado con aguacate fresco, tomate cherry y semillas",
+            price: 6.50,
+            category: "Desayunos",
+            image: "https://images.unsplash.com/photo-1571115764595-644a1f56a55c?w=300&h=200&fit=crop&crop=center"
+        },
+        {
+            name: "Croissant de Almendra",
+            description: "Croissant francés hojaldrado relleno de crema de almendra",
+            price: 3.20,
+            category: "Postres",
+            image: "https://images.unsplash.com/photo-1541167760496-1628856ab772?w=300&h=200&fit=crop&crop=center"
+        },
+        {
+            name: "Cheesecake de Frutos Rojos",
+            description: "Tarta de queso cremosa con coulis de frutos rojos de temporada",
+            price: 5.50,
+            category: "Postres",
+            image: "https://images.unsplash.com/photo-1551024506-0bccd828d307?w=300&h=200&fit=crop&crop=center"
+        },
+        {
+            name: "Bowl de Açaí",
+            description: "Bowl energético con açaí, granola casera, frutas frescas y miel",
+            price: 7.80,
+            category: "Desayunos",
+            image: "https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?w=300&h=200&fit=crop&crop=center"
         }
-        
+    ];
+    
+    try {
+        // Simular un pequeño delay para mostrar el loading
+        await new Promise(resolve => setTimeout(resolve, 500));
+        renderMenuItems(staticMenuItems);
     } catch (error) {
         console.error('Error cargando menú:', error);
         showMenuError();
