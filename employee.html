@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Empleados - Café Aroma</title>
+    <link rel="stylesheet" href="employee-styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Pantalla de Login -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-container">
+            <div class="login-header">
+                <i class="fas fa-coffee"></i>
+                <h1>Café Aroma</h1>
+                <p>Panel de Empleados</p>
+            </div>
+            
+            <form id="employeeLoginForm" class="login-form">
+                <div class="form-group">
+                    <label for="employee_code">Código de Empleado</label>
+                    <input type="text" id="employee_code" name="employee_code" placeholder="EMP001" required>
+                    <i class="fas fa-id-card"></i>
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" name="password" placeholder="••••••••" required>
+                    <i class="fas fa-lock"></i>
+                </div>
+                
+                <button type="submit" class="login-btn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Iniciar Sesión
+                </button>
+            </form>
+            
+            <div class="login-info">
+                <h3>Credenciales de Prueba:</h3>
+                <div class="test-credentials">
+                    <div class="credential-item">
+                        <strong>EMP001</strong> - maría123 (Camarera)
+                    </div>
+                    <div class="credential-item">
+                        <strong>EMP002</strong> - carlos123 (Barista)
+                    </div>
+                    <div class="credential-item">
+                        <strong>EMP003</strong> - ana123 (Cocinera)
+                    </div>
+                    <div class="credential-item">
+                        <strong>EMP004</strong> - david123 (Cajero)
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Principal de Empleado -->
+    <div id="employeePanel" class="employee-panel" style="display: none;">
+        <!-- Header -->
+        <header class="employee-header">
+            <div class="header-left">
+                <i class="fas fa-coffee"></i>
+                <h1>Café Aroma</h1>
+                <span class="employee-info">
+                    <span id="employeeName">Empleado</span>
+                    <span id="employeeRole" class="role-badge">Role</span>
+                </span>
+            </div>
+            
+            <div class="header-right">
+                <div class="time-status" id="timeStatus">
+                    <i class="fas fa-clock"></i>
+                    <span id="currentTime"></span>
+                </div>
+                <button id="logoutBtn" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Salir
+                </button>
+            </div>
+        </header>
+
+        <!-- Navegación -->
+        <nav class="employee-nav">
+            <button class="nav-btn active" data-section="clock">
+                <i class="fas fa-clock"></i>
+                Fichaje
+            </button>
+            <button class="nav-btn" data-section="orders">
+                <i class="fas fa-clipboard-list"></i>
+                Pedidos
+            </button>
+            <button class="nav-btn" data-section="kitchen">
+                <i class="fas fa-utensils"></i>
+                Cocina
+            </button>
+            <button class="nav-btn" data-section="history">
+                <i class="fas fa-history"></i>
+                Historial
+            </button>
+        </nav>
+
+        <!-- Sección de Fichaje -->
+        <section id="clockSection" class="content-section active">
+            <div class="section-header">
+                <h2><i class="fas fa-clock"></i> Control de Fichaje</h2>
+            </div>
+            
+            <div class="clock-container">
+                <div class="current-status" id="currentStatus">
+                    <div class="status-icon">
+                        <i class="fas fa-user-clock"></i>
+                    </div>
+                    <div class="status-info">
+                        <h3 id="statusTitle">Estado Actual</h3>
+                        <p id="statusMessage">Cargando...</p>
+                        <span id="statusTime" class="status-time"></span>
+                    </div>
+                </div>
+                
+                <div class="clock-actions">
+                    <button id="clockInBtn" class="clock-btn clock-in">
+                        <i class="fas fa-play"></i>
+                        Fichar Entrada
+                    </button>
+                    <button id="clockOutBtn" class="clock-btn clock-out">
+                        <i class="fas fa-stop"></i>
+                        Fichar Salida
+                    </button>
+                    <button id="breakStartBtn" class="clock-btn break-start">
+                        <i class="fas fa-coffee"></i>
+                        Iniciar Descanso
+                    </button>
+                    <button id="breakEndBtn" class="clock-btn break-end">
+                        <i class="fas fa-play"></i>
+                        Fin Descanso
+                    </button>
+                </div>
+                
+                <div class="notes-section">
+                    <label for="clockNotes">Notas (opcional):</label>
+                    <textarea id="clockNotes" placeholder="Ej: Llegada temprana, incidencia, etc."></textarea>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección de Pedidos -->
+        <section id="ordersSection" class="content-section">
+            <div class="section-header">
+                <h2><i class="fas fa-clipboard-list"></i> Tomar Pedido</h2>
+                <button id="newOrderBtn" class="new-order-btn">
+                    <i class="fas fa-plus"></i>
+                    Nuevo Pedido
+                </button>
+            </div>
+            
+            <div class="order-form" id="orderForm" style="display: none;">
+                <div class="order-header">
+                    <div class="form-group">
+                        <label for="tableNumber">Mesa #</label>
+                        <input type="number" id="tableNumber" min="1" max="50" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="customerName">Cliente (opcional)</label>
+                        <input type="text" id="customerName" placeholder="Nombre del cliente">
+                    </div>
+                </div>
+                
+                <div class="menu-selection">
+                    <h3>Seleccionar Items del Menú</h3>
+                    <div class="menu-categories">
+                        <button class="category-btn active" data-category="all">Todos</button>
+                        <button class="category-btn" data-category="Café Caliente">Café</button>
+                        <button class="category-btn" data-category="Café Frío">Frío</button>
+                        <button class="category-btn" data-category="Postres">Postres</button>
+                        <button class="category-btn" data-category="Desayunos">Desayunos</button>
+                    </div>
+                    
+                    <div id="menuItems" class="menu-items-grid">
+                        <!-- Items del menú se cargan dinámicamente -->
+                    </div>
+                </div>
+                
+                <div class="order-summary">
+                    <h3>Resumen del Pedido</h3>
+                    <div id="orderItems" class="order-items">
+                        <p class="no-items">No hay items seleccionados</p>
+                    </div>
+                    <div class="order-total">
+                        <strong>Total: €<span id="orderTotal">0.00</span></strong>
+                    </div>
+                    
+                    <div class="order-notes">
+                        <label for="orderNotes">Notas del pedido:</label>
+                        <textarea id="orderNotes" placeholder="Modificaciones, alergias, etc."></textarea>
+                    </div>
+                    
+                    <div class="order-actions">
+                        <button id="cancelOrderBtn" class="cancel-btn">
+                            <i class="fas fa-times"></i>
+                            Cancelar
+                        </button>
+                        <button id="submitOrderBtn" class="submit-btn">
+                            <i class="fas fa-check"></i>
+                            Enviar a Cocina
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="employee-stats">
+                <div class="stat-card">
+                    <i class="fas fa-clipboard-check"></i>
+                    <div class="stat-info">
+                        <span class="stat-number" id="todayOrders">0</span>
+                        <span class="stat-label">Pedidos Hoy</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-euro-sign"></i>
+                    <div class="stat-info">
+                        <span class="stat-number" id="totalSales">€0</span>
+                        <span class="stat-label">Ventas Totales</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección de Cocina/Bar -->
+        <section id="kitchenSection" class="content-section">
+            <div class="section-header">
+                <h2><i class="fas fa-utensils"></i> Pantalla de Cocina</h2>
+                <div class="kitchen-filters">
+                    <button class="filter-btn active" data-status="all">Todos</button>
+                    <button class="filter-btn" data-status="pending">Pendientes</button>
+                    <button class="filter-btn" data-status="preparing">Preparando</button>
+                    <button class="filter-btn" data-status="ready">Listos</button>
+                </div>
+            </div>
+            
+            <div id="kitchenOrders" class="kitchen-orders">
+                <!-- Pedidos se cargan dinámicamente -->
+            </div>
+        </section>
+
+        <!-- Sección de Historial -->
+        <section id="historySection" class="content-section">
+            <div class="section-header">
+                <h2><i class="fas fa-history"></i> Mi Historial</h2>
+            </div>
+            
+            <div class="history-tabs">
+                <button class="tab-btn active" data-tab="time-entries">Fichajes</button>
+                <button class="tab-btn" data-tab="my-orders">Mis Pedidos</button>
+            </div>
+            
+            <div id="timeEntriesTab" class="tab-content active">
+                <div id="timeEntriesList" class="time-entries-list">
+                    <!-- Historial de fichajes se carga dinámicamente -->
+                </div>
+            </div>
+            
+            <div id="myOrdersTab" class="tab-content">
+                <div id="myOrdersList" class="my-orders-list">
+                    <!-- Mis pedidos se cargan dinámicamente -->
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Notificaciones -->
+    <div id="notifications" class="notifications"></div>
+
+    <script src="employee-panel.js"></script>
+</body>
+</html>

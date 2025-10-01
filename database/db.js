@@ -89,6 +89,64 @@ const initializeDB = () => {
             FOREIGN KEY (contact_id) REFERENCES contacts (id)
         )`);
 
+                // Tabla de empleados
+        db.run(`CREATE TABLE IF NOT EXISTS employees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_code TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            role TEXT DEFAULT 'waiter', -- waiter, bartender, cook, cashier
+            phone TEXT,
+            hire_date DATE DEFAULT CURRENT_DATE,
+            status TEXT DEFAULT 'active', -- active, inactive, suspended
+            shift_start TIME,
+            shift_end TIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+
+        // Tabla de fichajes (entrada/salida)
+        db.run(`CREATE TABLE IF NOT EXISTS time_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            employee_id INTEGER NOT NULL,
+            entry_type TEXT NOT NULL, -- clock_in, clock_out, break_start, break_end
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            location TEXT, -- opcional: ubicación del fichaje
+            notes TEXT,
+            ip_address TEXT,
+            FOREIGN KEY (employee_id) REFERENCES employees (id)
+        )`);
+
+        // Tabla de pedidos
+        db.run(`CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_number TEXT UNIQUE NOT NULL,
+            employee_id INTEGER NOT NULL,
+            table_number INTEGER,
+            customer_name TEXT,
+            status TEXT DEFAULT 'pending', -- pending, preparing, ready, served, cancelled
+            total_amount DECIMAL(10,2) DEFAULT 0,
+            notes TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (employee_id) REFERENCES employees (id)
+        )`);
+
+        // Tabla de items del pedido
+        db.run(`CREATE TABLE IF NOT EXISTS order_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            order_id INTEGER NOT NULL,
+            menu_item_id INTEGER NOT NULL,
+            quantity INTEGER NOT NULL DEFAULT 1,
+            unit_price DECIMAL(10,2) NOT NULL,
+            total_price DECIMAL(10,2) NOT NULL,
+            notes TEXT, -- modificaciones específicas del item
+            status TEXT DEFAULT 'pending', -- pending, preparing, ready
+            FOREIGN KEY (order_id) REFERENCES orders (id),
+            FOREIGN KEY (menu_item_id) REFERENCES menu_items (id)
+        )`);
+
         // Tabla de acciones administrativas
         db.run(`CREATE TABLE IF NOT EXISTS admin_actions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -98,9 +156,7 @@ const initializeDB = () => {
             target_id INTEGER NOT NULL,
             description TEXT,
             ip_address TEXT,
-            user_agent TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (admin_id) REFERENCES users (id)
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
 
         console.log('✅ Tablas de la base de datos creadas exitosamente');

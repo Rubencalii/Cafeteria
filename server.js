@@ -19,12 +19,16 @@ const contactRouter = require('./backend/routes/contact');
 const authRouter = require('./backend/routes/auth');
 const menuRouter = require('./backend/routes/menu');
 const emailRouter = require('./backend/routes/email');
+const employeesRouter = require('./backend/routes/employees');
+const ordersRouter = require('./backend/routes/orders');
 
 app.use('/api/reservations', reservationsRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/menu', menuRouter);
 app.use('/api/email', emailRouter);
+app.use('/api/employees', employeesRouter);
+app.use('/api/orders', ordersRouter);
 
 // Ruta principal para servir la página web
 app.get('/', (req, res) => {

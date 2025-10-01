@@ -70,6 +70,29 @@ const initializeData = async () => {
             });
             insertSetting.finalize();
 
+            console.log('✅ Configuración del restaurante insertada');
+
+            // Insertar empleados de ejemplo
+            const bcrypt = require('bcrypt');
+            const saltRounds = 10;
+            
+            const employees = [
+                ['EMP001', 'María García', 'maria.garcia@cafearoma.com', bcrypt.hashSync('maria123', saltRounds), 'waiter', '+34 666 111 222', '08:00', '16:00'],
+                ['EMP002', 'Carlos López', 'carlos.lopez@cafearoma.com', bcrypt.hashSync('carlos123', saltRounds), 'bartender', '+34 666 333 444', '14:00', '22:00'],
+                ['EMP003', 'Ana Martínez', 'ana.martinez@cafearoma.com', bcrypt.hashSync('ana123', saltRounds), 'cook', '+34 666 555 666', '07:00', '15:00'],
+                ['EMP004', 'David Ruiz', 'david.ruiz@cafearoma.com', bcrypt.hashSync('david123', saltRounds), 'cashier', '+34 666 777 888', '09:00', '17:00']
+            ];
+
+            const insertEmployee = db.prepare(`INSERT OR IGNORE INTO employees 
+                (employee_code, name, email, password, role, phone, shift_start, shift_end) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+            
+            employees.forEach(employee => {
+                insertEmployee.run(employee);
+                console.log(`✅ Empleado ${employee[1]} (${employee[4]}) agregado`);
+            });
+            insertEmployee.finalize();
+
             console.log('✅ Datos iniciales insertados correctamente');
         });
 
