@@ -389,7 +389,7 @@ function initializeContactForm() {
         const contactData = {
             name: formData.get('name'),
             email: formData.get('email'),
-            subject: formData.get('subject'),
+            subject: formData.get('subject') || 'Consulta desde la web',
             message: formData.get('message')
         };
         
@@ -400,9 +400,6 @@ function initializeContactForm() {
         submitBtn.disabled = true;
         
         try {
-            // Simular envío de mensaje (sin backend)
-            await new Promise(resolve => setTimeout(resolve, 1200));
-            
             // Validar datos básicos
             if (!contactData.name || !contactData.email || !contactData.message) {
                 throw new Error('Por favor complete todos los campos obligatorios');
@@ -414,22 +411,25 @@ function initializeContactForm() {
                 throw new Error('Por favor ingrese un email válido');
             }
             
-            // Simular respuesta exitosa
-            const result = {
-                success: true,
-                message: 'Mensaje enviado exitosamente',
-                data: {
-                    ...contactData,
-                    id: Date.now(),
-                    date: new Date().toISOString(),
-                    status: 'new'
-                }
-            };
+            // Enviar al backend real
+            const response = await fetch('/api/contact', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(contactData)
+            });
             
-            // Guardar mensaje en localStorage para demo
-            const existingMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
-            existingMessages.push(result.data);
-            localStorage.setItem('contactMessages', JSON.stringify(existingMessages));
+            const result = await response.json();
+            
+            if (!result.success) {
+                throw new Error(result.message || 'Error enviando mensaje');
+            }
+            
+            // Mensaje enviado exitosamente al backend
+            console.log('✅ Mensaje enviado al servidor:', result);
+            
+            // El mensaje ahora se guarda automáticamente en la base de datos del servidor
             
             submitBtn.textContent = '¡Mensaje enviado!';
             submitBtn.style.background = '#28a745';

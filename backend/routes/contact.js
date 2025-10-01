@@ -53,6 +53,104 @@ router.post('/', [
     });
 });
 
+// GET /api/contact/:id - Obtener un contacto específico
+router.get('/:id', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const db = getDB();
+        
+        const contact = await new Promise((resolve, reject) => {
+            db.get('SELECT * FROM contacts WHERE id = ?', [id], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+        
+        if (!contact) {
+            return res.status(404).json({
+                success: false,
+                message: 'Contacto no encontrado'
+            });
+        }
+        
+        res.json({
+            success: true,
+            data: contact
+        });
+        
+    } catch (error) {
+        console.error('Error obteniendo contacto:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
+});
+
+// PATCH /api/contact/:id/status - Actualizar estado de un contacto
+router.patch('/:id/status', authenticateToken, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+        
+        // Validar estado
+        const validStatuses = ['unread', 'read', 'replied'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Estado inválido. Debe ser: unread, read o replied'
+            });
+        }
+        
+        const db = getDB();
+        
+        // Verificar que el contacto existe
+        const contact = await new Promise((resolve, reject) => {
+            db.get('SELECT * FROM contacts WHERE id = ?', [id], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+        
+        if (!contact) {
+            return res.status(404).json({
+                success: false,
+                message: 'Contacto no encontrado'
+            });
+        }
+        
+        // Actualizar estado
+        const updated = await new Promise((resolve, reject) => {
+            db.run('UPDATE contacts SET status = ? WHERE id = ?', [status, id], function(err) {
+                if (err) reject(err);
+                else resolve(this.changes > 0);
+            });
+        });
+        
+        if (!updated) {
+            return res.status(500).json({
+                success: false,
+                message: 'Error actualizando el estado'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: 'Estado actualizado correctamente',
+            data: { id, status }
+        });
+        
+    } catch (error) {
+        console.error('Error actualizando estado de contacto:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
+});
+
+module.exports = router;
+
 // Obtener todos los mensajes de contacto (solo admin)
 router.get('/', authenticateToken, requireAdmin, (req, res) => {
     const db = getDB();

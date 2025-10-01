@@ -11,7 +11,7 @@ class EmailService {
             const emailService = process.env.EMAIL_SERVICE;
             
             if (emailService === 'gmail') {
-                this.transporter = nodemailer.createTransporter({
+                this.transporter = nodemailer.createTransport({
                     service: 'gmail',
                     auth: {
                         user: process.env.EMAIL_USER,
@@ -19,7 +19,7 @@ class EmailService {
                     }
                 });
             } else if (emailService === 'sendgrid') {
-                this.transporter = nodemailer.createTransporter({
+                this.transporter = nodemailer.createTransport({
                     host: 'smtp.sendgrid.net',
                     port: 587,
                     secure: false,
@@ -29,7 +29,7 @@ class EmailService {
                     }
                 });
             } else if (emailService === 'outlook') {
-                this.transporter = nodemailer.createTransporter({
+                this.transporter = nodemailer.createTransport({
                     service: 'hotmail',
                     auth: {
                         user: process.env.EMAIL_USER,
@@ -38,7 +38,7 @@ class EmailService {
                 });
             } else if (emailService === 'test') {
                 // Para desarrollo/testing
-                this.transporter = nodemailer.createTransporter({
+                this.transporter = nodemailer.createTransport({
                     host: 'smtp.ethereal.email',
                     port: 587,
                     secure: false,

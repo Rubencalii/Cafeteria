@@ -890,44 +890,68 @@ async function loadContacts(page = 1) {
     try {
         showLoading(true);
         
-        // Cargar mensajes del localStorage (los que se envían desde el sitio web)
-        const savedMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+        // Obtener filtro de estado
+        const statusFilter = document.getElementById('contactStatus')?.value || '';
         
-        // Combinar con mensajes estáticos del sistema
-        const staticMessages = window.staticData ? window.staticData.contacts : [];
-        
-        // Fusionar todos los mensajes
-        const allMessages = [...staticMessages, ...savedMessages];
-        
-        // Filtrar por estado si se especifica
-        const statusFilter = document.getElementById('contactStatusFilter')?.value || 'all';
-        let filteredMessages = allMessages;
-        
-        if (statusFilter !== 'all') {
-            filteredMessages = allMessages.filter(m => m.status === statusFilter);
+        // Construir URL con parámetros
+        let url = `/api/contact?page=${page}&limit=10`;
+        if (statusFilter) {
+            url += `&status=${statusFilter}`;
         }
         
-        // Ordenar por fecha (más recientes primero)
-        filteredMessages.sort((a, b) => {
-            const dateA = new Date(a.date);
-            const dateB = new Date(b.date);
-            return dateB - dateA;
+        // Cargar mensajes desde el backend real
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            }
         });
         
-        // Simular paginación simple
-        const limit = 10;
-        const start = (page - 1) * limit;
-        const paginatedMessages = filteredMessages.slice(start, start + limit);
+        if (!response.ok) {
+            throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
         
-        displayContacts(paginatedMessages);
+        const result = await response.json();
         
-        // Mostrar información de paginación simple
-        const totalPages = Math.ceil(filteredMessages.length / limit);
-        console.log(`Mostrando página ${page} de ${totalPages} (Total: ${filteredMessages.length} mensajes)`);
+        if (!result.success) {
+            throw new Error(result.message || 'Error cargando contactos');
+        }
+        
+        // Mostrar contactos
+        displayContacts(result.data.contacts || []);
+        
+        // Actualizar información de paginación
+        if (result.data.pagination) {
+            const { page: currentPage, pages, total } = result.data.pagination;
+            console.log(`📧 Página ${currentPage} de ${pages} (${total} mensajes total)`);
+            
+            // Actualizar controles de paginación si existen
+            updateContactsPagination(result.data.pagination);
+        }
+        
+        console.log(`✅ Cargados ${result.data.contacts.length} mensajes de contacto`);
         
     } catch (error) {
-        console.error('Error cargando contactos:', error);
-        showNotification('Error cargando contactos', 'error');
+        console.error('❌ Error cargando contactos:', error);
+        
+        // Fallback: mostrar mensaje de error
+        const tbody = document.getElementById('contactsTableBody');
+        if (tbody) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center error-message">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Error cargando mensajes: ${error.message}
+                        <br>
+                        <button onclick="loadContacts()" class="btn btn-primary" style="margin-top: 10px;">
+                            <i class="fas fa-refresh"></i> Reintentar
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        showNotification('Error cargando contactos: ' + error.message, 'error');
     } finally {
         showLoading(false);
     }
@@ -958,11 +982,11 @@ function displayContacts(contacts) {
                     <button class="btn-icon view" onclick="viewContact(${contact.id})" title="Ver mensaje">
                         <i class="fas fa-eye"></i>
                     </button>
+                    <button class="btn-icon reply" onclick="openReplyModal(${contact.id})" title="Responder por email">
+                        <i class="fas fa-reply"></i>
+                    </button>
                     <button class="btn-icon edit" onclick="updateContactStatus(${contact.id}, 'read')" title="Marcar como leído">
                         <i class="fas fa-check"></i>
-                    </button>
-                    <button class="btn-icon edit" onclick="updateContactStatus(${contact.id}, 'replied')" title="Marcar como respondido">
-                        <i class="fas fa-reply"></i>
                     </button>
                 </div>
             </td>
@@ -1446,6 +1470,223 @@ function updateDashboardStats() {
     } catch (error) {
         console.error('Error actualizando estadísticas:', error);
     }
+}
+
+// ==========================================
+// SISTEMA DE RESPUESTA DE CONTACTOS
+// ==========================================
+let currentContactForReply = null;
+
+async function openReplyModal(contactId) {
+    try {
+        // Obtener datos del contacto
+        const response = await fetch(`/api/contact/${contactId}`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error('Error obteniendo datos del contacto');
+        }
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.message);
+        }
+        
+        currentContactForReply = result.data;
+        showReplyModal(currentContactForReply);
+        
+    } catch (error) {
+        console.error('Error abriendo modal de respuesta:', error);
+        showNotification('Error cargando datos del contacto: ' + error.message, 'error');
+    }
+}
+
+function showReplyModal(contact) {
+    const modal = document.createElement('div');
+    modal.className = 'reply-modal-overlay';
+    modal.innerHTML = `
+        <div class="reply-modal-content">
+            <div class="reply-modal-header">
+                <h3>📧 Responder a ${contact.name}</h3>
+                <button onclick="closeReplyModal()" class="close-btn">&times;</button>
+            </div>
+            
+            <div class="reply-modal-body">
+                <div class="original-message">
+                    <h4>📨 Mensaje Original:</h4>
+                    <div class="original-message-content">
+                        <p><strong>De:</strong> ${contact.name} (${contact.email})</p>
+                        <p><strong>Asunto:</strong> ${contact.subject}</p>
+                        <p><strong>Fecha:</strong> ${formatDate(contact.created_at)}</p>
+                        <div class="message-text">
+                            <strong>Mensaje:</strong>
+                            <div class="message-content">${contact.message}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="reply-form">
+                    <h4>✍️ Tu Respuesta:</h4>
+                    <form id="replyForm">
+                        <div class="form-group">
+                            <label for="replySubject">Asunto:</label>
+                            <input type="text" id="replySubject" value="Re: ${contact.subject}" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="replyMessage">Mensaje:</label>
+                            <textarea id="replyMessage" rows="8" placeholder="Escribe tu respuesta aquí..." required></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="markAsReplied" checked>
+                                Marcar como respondido automáticamente
+                            </label>
+                        </div>
+                        
+                        <div class="reply-actions">
+                            <button type="button" onclick="closeReplyModal()" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancelar
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> Enviar Respuesta
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Configurar el formulario
+    const replyForm = document.getElementById('replyForm');
+    replyForm.addEventListener('submit', handleReplySubmit);
+    
+    // Enfocar en el textarea
+    setTimeout(() => {
+        document.getElementById('replyMessage').focus();
+    }, 100);
+}
+
+async function handleReplySubmit(e) {
+    e.preventDefault();
+    
+    const subject = document.getElementById('replySubject').value.trim();
+    const message = document.getElementById('replyMessage').value.trim();
+    const markAsReplied = document.getElementById('markAsReplied').checked;
+    
+    if (!subject || !message) {
+        showNotification('Por favor completa todos los campos', 'error');
+        return;
+    }
+    
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+    submitBtn.disabled = true;
+    
+    try {
+        // Enviar respuesta por email
+        const response = await fetch('/api/email/send-contact-reply', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                contactId: currentContactForReply.id,
+                message: message
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.message || 'Error enviando respuesta');
+        }
+        
+        // Mostrar mensaje de éxito
+        showNotification('✅ Respuesta enviada exitosamente por email', 'success');
+        
+        // Cerrar modal
+        closeReplyModal();
+        
+        // Recargar lista de contactos
+        loadContacts();
+        
+        // Actualizar estadísticas
+        updateDashboardStats();
+        
+        console.log('✅ Respuesta enviada:', result);
+        
+    } catch (error) {
+        console.error('❌ Error enviando respuesta:', error);
+        showNotification('Error enviando respuesta: ' + error.message, 'error');
+        
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+function closeReplyModal() {
+    const modal = document.querySelector('.reply-modal-overlay');
+    if (modal) {
+        modal.remove();
+    }
+    currentContactForReply = null;
+}
+
+// Función para actualizar estado de contacto
+async function updateContactStatus(contactId, newStatus) {
+    try {
+        const response = await fetch(`/api/contact/${contactId}/status`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: newStatus })
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.message);
+        }
+        
+        showNotification(`Contacto marcado como ${newStatus}`, 'success');
+        loadContacts(); // Recargar lista
+        updateDashboardStats(); // Actualizar estadísticas
+        
+    } catch (error) {
+        console.error('Error actualizando estado:', error);
+        showNotification('Error actualizando estado: ' + error.message, 'error');
+    }
+}
+
+// Función para obtener texto del estado de contacto
+function getContactStatusText(status) {
+    const statusTexts = {
+        'unread': 'No leído',
+        'read': 'Leído',
+        'replied': 'Respondido'
+    };
+    return statusTexts[status] || status;
+}
+
+// Función para actualizar paginación de contactos
+function updateContactsPagination(pagination) {
+    // Implementar controles de paginación si se necesitan
+    console.log('Paginación de contactos:', pagination);
 }
 
 // Widget de historial de acciones
