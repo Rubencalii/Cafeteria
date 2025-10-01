@@ -237,6 +237,65 @@ function initializeReservationSystem() {
         reservationDate.max = maxDate.toISOString().split('T')[0];
     }
     
+    // Verificar disponibilidad en tiempo real
+    const timeField = document.getElementById('reservation-time');
+    const availabilityMessage = document.createElement('div');
+    availabilityMessage.className = 'availability-message';
+    availabilityMessage.style.cssText = `
+        margin-top: 5px;
+        padding: 8px;
+        border-radius: 4px;
+        font-size: 14px;
+        display: none;
+    `;
+    
+    if (timeField) {
+        timeField.parentNode.appendChild(availabilityMessage);
+        
+        // Verificar disponibilidad cuando cambien fecha o hora
+        async function checkAvailability() {
+            const date = reservationDate?.value;
+            const time = timeField?.value;
+            
+            if (!date || !time) {
+                availabilityMessage.style.display = 'none';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/reservations/availability/${date}/${time}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    availabilityMessage.style.display = 'block';
+                    
+                    if (result.data.available) {
+                        availabilityMessage.innerHTML = `
+                            <i class="fas fa-check-circle" style="color: #28a745;"></i>
+                            <span style="color: #28a745; font-weight: 500;">✅ Horario disponible</span>
+                        `;
+                        availabilityMessage.style.backgroundColor = '#d4edda';
+                        availabilityMessage.style.borderLeft = '4px solid #28a745';
+                    } else {
+                        availabilityMessage.innerHTML = `
+                            <i class="fas fa-exclamation-triangle" style="color: #dc3545;"></i>
+                            <span style="color: #dc3545; font-weight: 500;">❌ Este horario ya está reservado</span>
+                        `;
+                        availabilityMessage.style.backgroundColor = '#f8d7da';
+                        availabilityMessage.style.borderLeft = '4px solid #dc3545';
+                    }
+                }
+            } catch (error) {
+                console.error('Error verificando disponibilidad:', error);
+                availabilityMessage.style.display = 'none';
+            }
+        }
+        
+        // Eventos para verificar disponibilidad
+        reservationDate?.addEventListener('change', checkAvailability);
+        timeField?.addEventListener('change', checkAvailability);
+    }
+    
     // Manejar envío del formulario
     reservationForm.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -259,51 +318,30 @@ function initializeReservationSystem() {
         submitBtn.disabled = true;
         
         try {
-            // Simular procesamiento de reserva (sin backend)
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            // Enviar reserva al backend real
+            const response = await fetch('/api/reservations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(reservationData)
+            });
             
-            // Validar datos básicos
-            if (!reservationData.name || !reservationData.email || !reservationData.phone || 
-                !reservationData.date || !reservationData.time || !reservationData.guests) {
-                throw new Error('Por favor complete todos los campos obligatorios');
-            }
+            const result = await response.json();
             
-            // Validar email
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(reservationData.email)) {
-                throw new Error('Por favor ingrese un email válido');
-            }
-            
-            // Validar fecha (no debe ser en el pasado)
-            const selectedDate = new Date(reservationData.date);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            if (selectedDate < today) {
-                throw new Error('No se pueden hacer reservas para fechas pasadas');
-            }
-            
-            // Simular respuesta exitosa
-            const result = {
-                success: true,
-                message: 'Reserva procesada exitosamente',
-                data: {
-                    ...reservationData,
-                    id: Date.now(),
-                    status: 'confirmed'
+            if (!result.success) {
+                // Si hay conflicto de horario (código 409)
+                if (response.status === 409) {
+                    throw new Error(`⚠️ ${result.message}\n\n${result.availableMessage || 'Por favor elige otro horario.'}`);
                 }
-            };
+                throw new Error(result.message || 'Error al procesar la reserva');
+            }
             
-            // Guardar reserva en localStorage para demo
-            const existingReservations = JSON.parse(localStorage.getItem('reservations') || '[]');
-            existingReservations.push(result.data);
-            localStorage.setItem('reservations', JSON.stringify(existingReservations));
-            
-            submitBtn.innerHTML = '<i class="fas fa-check"></i> ¡Reserva Confirmada!';
+            submitBtn.innerHTML = '<i class="fas fa-check"></i> ¡Reserva Enviada!';
             submitBtn.style.background = '#28a745';
             
             setTimeout(() => {
-                showReservationConfirmation(reservationData, reservationForm);
+                showReservationConfirmation(result.data, reservationForm);
             }, 1000);
             
         } catch (error) {

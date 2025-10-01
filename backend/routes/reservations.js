@@ -12,9 +12,9 @@ router.post('/', [
     body('email').isEmail().withMessage('Email inválido'),
     body('phone').notEmpty().withMessage('El teléfono es requerido'),
     body('date').isISO8601().withMessage('Fecha inválida'),
-    body('time').notEmpty().withMessage('La hora es requerida'),
+    body('time').matches(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).withMessage('Hora inválida'),
     body('guests').isInt({ min: 1, max: 12 }).withMessage('Número de comensales debe ser entre 1 y 12')
-], (req, res) => {
+], async (req, res) => {
     // Validar entrada
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -28,7 +28,7 @@ router.post('/', [
     const { name, email, phone, date, time, guests, message } = req.body;
     const db = getDB();
 
-    // Verificar disponibilidad (simplificado - en producción sería más complejo)
+    // Verificar que la fecha no sea en el pasado
     const reservationDateTime = new Date(`${date} ${time}`);
     const now = new Date();
     
@@ -39,24 +39,54 @@ router.post('/', [
         });
     }
 
+    // VERIFICAR DISPONIBILIDAD - Evitar conflictos de horarios
+    const checkAvailabilitySql = `
+        SELECT COUNT(*) as conflictCount, 
+               GROUP_CONCAT(name) as conflictNames
+        FROM reservations 
+        WHERE date = ? 
+        AND time = ? 
+        AND status IN ('confirmed', 'pending')
+    `;
+    
+    const availabilityCheck = await new Promise((resolve, reject) => {
+        db.get(checkAvailabilitySql, [date, time], (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+        });
+    });
+
+    // Si ya hay reservas confirmadas o pendientes para esa fecha/hora
+    if (availabilityCheck.conflictCount > 0) {
+        return res.status(409).json({
+            success: false,
+            message: `Lo sentimos, ya hay una reserva para el ${date} a las ${time}. Por favor, elige otro horario.`,
+            availableMessage: 'Te sugerimos elegir otro horario disponible.',
+            conflictDetails: {
+                date: date,
+                time: time,
+                existingReservations: availabilityCheck.conflictCount
+            }
+        });
+    }
+
     // Insertar reserva
     const sql = `INSERT INTO reservations (name, email, phone, date, time, guests, message, status) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`;
     
-    db.run(sql, [name, email, phone, date, time, guests, message || ''], function(err) {
-        if (err) {
-            console.error('Error creando reserva:', err);
-            return res.status(500).json({
-                success: false,
-                message: 'Error al crear la reserva'
+    try {
+        const result = await new Promise((resolve, reject) => {
+            db.run(sql, [name, email, phone, date, time, guests, message || ''], function(err) {
+                if (err) reject(err);
+                else resolve({ id: this.lastID });
             });
-        }
+        });
 
         res.status(201).json({
             success: true,
             message: 'Reserva creada exitosamente. Te contactaremos pronto para confirmar.',
             data: {
-                id: this.lastID,
+                id: result.id,
                 name,
                 email,
                 phone,
@@ -67,8 +97,127 @@ router.post('/', [
             }
         });
 
-        db.close();
-    });
+    } catch (err) {
+        console.error('Error creando reserva:', err);
+        return res.status(500).json({
+            success: false,
+            message: 'Error al crear la reserva'
+        });
+    }
+});
+
+// Verificar disponibilidad de un horario específico (público)
+router.get('/availability/:date/:time', async (req, res) => {
+    try {
+        const { date, time } = req.params;
+        const db = getDB();
+        
+        // Validar formato de fecha y hora
+        if (!date.match(/^\d{4}-\d{2}-\d{2}$/) || !time.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Formato de fecha u hora inválido'
+            });
+        }
+        
+        const checkSql = `
+            SELECT COUNT(*) as reservationCount
+            FROM reservations 
+            WHERE date = ? AND time = ? AND status IN ('confirmed', 'pending')
+        `;
+        
+        const result = await new Promise((resolve, reject) => {
+            db.get(checkSql, [date, time], (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+        
+        const isAvailable = result.reservationCount === 0;
+        
+        res.json({
+            success: true,
+            data: {
+                date,
+                time,
+                available: isAvailable,
+                message: isAvailable ? 
+                    'Horario disponible' : 
+                    'Este horario ya está reservado'
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error verificando disponibilidad:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
+});
+
+// Obtener horarios disponibles para una fecha específica (público)
+router.get('/available-times/:date', async (req, res) => {
+    try {
+        const { date } = req.params;
+        const db = getDB();
+        
+        // Validar formato de fecha
+        if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Formato de fecha inválido'
+            });
+        }
+        
+        // Horarios de operación (se pueden configurar desde variables de entorno)
+        const startHour = 8; // 08:00
+        const endHour = 23;  // 23:00
+        const timeSlots = [];
+        
+        // Generar todos los horarios posibles cada 30 minutos
+        for (let hour = startHour; hour <= endHour; hour++) {
+            for (let minute = 0; minute < 60; minute += 30) {
+                const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+                timeSlots.push(timeString);
+            }
+        }
+        
+        // Verificar cuáles están ocupados
+        const occupiedTimesSql = `
+            SELECT time 
+            FROM reservations 
+            WHERE date = ? AND status IN ('confirmed', 'pending')
+        `;
+        
+        const occupiedTimes = await new Promise((resolve, reject) => {
+            db.all(occupiedTimesSql, [date], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows.map(row => row.time));
+            });
+        });
+        
+        // Filtrar horarios disponibles
+        const availableTimes = timeSlots.filter(time => !occupiedTimes.includes(time));
+        
+        res.json({
+            success: true,
+            data: {
+                date,
+                availableTimes,
+                occupiedTimes,
+                totalSlots: timeSlots.length,
+                availableSlots: availableTimes.length
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error obteniendo horarios disponibles:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
 });
 
 // Obtener todas las reservas (solo admin)
