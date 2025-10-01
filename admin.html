@@ -94,6 +94,10 @@
                     <i class="fas fa-envelope"></i>
                     <span>Mensajes de Contacto</span>
                 </li>
+                <li class="menu-item" data-section="employees">
+                    <i class="fas fa-users"></i>
+                    <span>Empleados</span>
+                </li>
                 <li class="menu-item" data-section="analytics">
                     <i class="fas fa-chart-bar"></i>
                     <span>Análisis</span>
@@ -269,6 +273,80 @@
 
                 <div id="contactsList" class="contacts-list">
                     <!-- Mensajes de contacto se cargarán aquí -->
+                </div>
+            </section>
+
+            <!-- Employees Section -->
+            <section id="employeesSection" class="content-section">
+                <div class="section-header">
+                    <h3>Gestión de Empleados</h3>
+                    <div class="employee-filters">
+                        <select id="employeeFilter">
+                            <option value="">Todos los empleados</option>
+                            <option value="working">Trabajando ahora</option>
+                            <option value="waiter">Meseros</option>
+                            <option value="cook">Cocineros</option>
+                            <option value="cashier">Cajeros</option>
+                        </select>
+                        <input type="date" id="timeEntriesDate" value="">
+                    </div>
+                </div>
+
+                <!-- Empleados trabajando actualmente -->
+                <div class="employees-working">
+                    <h4><i class="fas fa-clock"></i> Empleados Trabajando Actualmente</h4>
+                    <div id="currentlyWorkingList" class="currently-working-list">
+                        <!-- Se cargarán empleados trabajando -->
+                    </div>
+                </div>
+
+                <!-- Estadísticas del día -->
+                <div class="employee-stats">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="employeesWorkedToday">0</h3>
+                            <p>Empleados Hoy</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="totalEntriesTeday">0</h3>
+                            <p>Fichajes Hoy</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="avgHoursToday">0</h3>
+                            <p>Promedio Horas</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lista de empleados -->
+                <div class="employees-list-container">
+                    <h4><i class="fas fa-list"></i> Lista de Empleados</h4>
+                    <div id="employeesList" class="employees-list">
+                        <!-- Lista de empleados se cargará aquí -->
+                    </div>
+                </div>
+
+                <!-- Historial de fichajes -->
+                <div class="time-entries-container">
+                    <h4><i class="fas fa-history"></i> Historial de Fichajes</h4>
+                    <div id="timeEntriesList" class="time-entries-list">
+                        <!-- Historial de fichajes se cargará aquí -->
+                    </div>
                 </div>
             </section>
 

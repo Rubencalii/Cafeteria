@@ -229,6 +229,7 @@ function showSection(sectionName) {
         reservations: 'Gestión de Reservaciones',
         menu: 'Gestión del Menú',
         contacts: 'Mensajes de Contacto',
+        employees: 'Gestión de Empleados',
         analytics: 'Análisis y Reportes',
         settings: 'Configuración del Sistema'
     };
@@ -251,6 +252,9 @@ function showSection(sectionName) {
             break;
         case 'contacts':
             loadContacts();
+            break;
+        case 'employees':
+            loadEmployeesSection();
             break;
         case 'analytics':
             loadAnalytics();
@@ -2397,4 +2401,290 @@ function getContactStatusText(status) {
         replied: 'Respondido'
     };
     return statusTexts[status] || status;
+}
+
+// ==========================================
+// EMPLOYEES MANAGEMENT FUNCTIONS
+// ==========================================
+
+async function loadEmployeesSection() {
+    try {
+        // Cargar estadísticas de empleados
+        await loadEmployeeStats();
+        
+        // Cargar empleados trabajando actualmente
+        await loadCurrentlyWorkingEmployees();
+        
+        // Cargar lista de empleados
+        await loadEmployeesList();
+        
+        // Cargar historial de fichajes del día actual
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('timeEntriesDate').value = today;
+        await loadTimeEntries(today);
+        
+        // Setup event listeners para filtros
+        setupEmployeeFilters();
+        
+    } catch (error) {
+        console.error('Error cargando sección de empleados:', error);
+        showNotification('Error al cargar datos de empleados', 'error');
+    }
+}
+
+async function loadEmployeeStats() {
+    try {
+        const response = await fetch('/api/employees/stats', {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            const stats = data.data.today_stats;
+            
+            document.getElementById('employeesWorkedToday').textContent = stats.employees_worked_today || 0;
+            document.getElementById('totalEntriesTeday').textContent = stats.total_entries_today || 0;
+            document.getElementById('avgHoursToday').textContent = 
+                stats.avg_hours_today ? stats.avg_hours_today.toFixed(1) + 'h' : '0h';
+        }
+    } catch (error) {
+        console.error('Error cargando estadísticas de empleados:', error);
+    }
+}
+
+async function loadCurrentlyWorkingEmployees() {
+    try {
+        const response = await fetch('/api/employees/stats', {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            const currentlyWorking = data.data.currently_working;
+            const container = document.getElementById('currentlyWorkingList');
+            
+            if (currentlyWorking && currentlyWorking.length > 0) {
+                container.innerHTML = currentlyWorking.map(employee => `
+                    <div class="working-employee-card">
+                        <div class="employee-info">
+                            <div class="employee-avatar">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div>
+                                <div class="employee-name">${employee.name}</div>
+                                <span class="employee-role">${getRoleText(employee.role)}</span>
+                            </div>
+                        </div>
+                        <div class="clock-in-time">
+                            <i class="fas fa-clock"></i>
+                            Desde: ${formatTime(employee.clock_in)}
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = `
+                    <div class="no-employees-message">
+                        <i class="fas fa-user-clock"></i>
+                        <p>No hay empleados trabajando actualmente</p>
+                    </div>
+                `;
+            }
+        }
+    } catch (error) {
+        console.error('Error cargando empleados trabajando:', error);
+    }
+}
+
+async function loadEmployeesList() {
+    try {
+        const response = await fetch('/api/employees/list', {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            const employees = data.data;
+            const container = document.getElementById('employeesList');
+            
+            if (employees && employees.length > 0) {
+                container.innerHTML = employees.map(employee => `
+                    <div class="employee-card">
+                        <div class="employee-card-header">
+                            <div class="employee-avatar">
+                                ${employee.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div class="employee-details">
+                                <h5>${employee.name}</h5>
+                                <div class="employee-code">${employee.employee_code}</div>
+                            </div>
+                            <span class="employee-role-badge">${getRoleText(employee.role)}</span>
+                        </div>
+                        <div class="employee-status">
+                            <span class="${employee.current_session ? 'employee-status-working' : 'employee-status-off'}">
+                                <span class="status-indicator ${employee.current_session ? 'status-working' : 'status-off'}"></span>
+                                ${employee.current_session ? 'Trabajando' : 'Fuera'}
+                            </span>
+                            <span class="employee-today-entries">
+                                ${employee.today_entries} fichajes hoy
+                            </span>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = `
+                    <div class="no-employees-message">
+                        <i class="fas fa-users"></i>
+                        <p>No hay empleados registrados</p>
+                    </div>
+                `;
+            }
+        }
+    } catch (error) {
+        console.error('Error cargando lista de empleados:', error);
+    }
+}
+
+async function loadTimeEntries(date = null) {
+    try {
+        let url = '/api/employees/time-entries';
+        const params = new URLSearchParams();
+        
+        if (date) {
+            params.append('date', date);
+        }
+        
+        if (params.toString()) {
+            url += '?' + params.toString();
+        }
+        
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            const timeEntries = data.data;
+            const container = document.getElementById('timeEntriesList');
+            
+            if (timeEntries && timeEntries.length > 0) {
+                container.innerHTML = timeEntries.map(entry => `
+                    <div class="time-entry-item">
+                        <div class="time-entry-employee">
+                            <h6>${entry.employee_name}</h6>
+                            <div class="employee-code">${entry.employee_code} - ${getRoleText(entry.role)}</div>
+                        </div>
+                        <div class="time-entry-times">
+                            <div class="time-entry-in">
+                                <h6>Entrada</h6>
+                                <span>${formatTime(entry.clock_in)}</span>
+                            </div>
+                            ${entry.clock_out ? `
+                                <div class="time-entry-out">
+                                    <h6>Salida</h6>
+                                    <span>${formatTime(entry.clock_out)}</span>
+                                </div>
+                                <div class="time-entry-duration">
+                                    ${entry.total_hours ? entry.total_hours.toFixed(1) + 'h' : 'N/A'}
+                                </div>
+                            ` : `
+                                <div class="time-entry-duration">
+                                    Trabajando...
+                                </div>
+                            `}
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.innerHTML = `
+                    <div class="no-time-entries-message">
+                        <i class="fas fa-clock"></i>
+                        <p>No hay fichajes para la fecha seleccionada</p>
+                    </div>
+                `;
+            }
+        }
+    } catch (error) {
+        console.error('Error cargando fichajes:', error);
+    }
+}
+
+function setupEmployeeFilters() {
+    // Filtro de empleados
+    const employeeFilter = document.getElementById('employeeFilter');
+    if (employeeFilter) {
+        employeeFilter.addEventListener('change', function() {
+            filterEmployees(this.value);
+        });
+    }
+    
+    // Filtro de fecha para fichajes
+    const dateFilter = document.getElementById('timeEntriesDate');
+    if (dateFilter) {
+        dateFilter.addEventListener('change', function() {
+            loadTimeEntries(this.value);
+        });
+    }
+}
+
+function filterEmployees(filter) {
+    const employeeCards = document.querySelectorAll('.employee-card');
+    
+    employeeCards.forEach(card => {
+        const roleText = card.querySelector('.employee-role-badge').textContent.toLowerCase();
+        const statusText = card.querySelector('.employee-status span').textContent.toLowerCase();
+        
+        let show = true;
+        
+        switch(filter) {
+            case 'working':
+                show = statusText.includes('trabajando');
+                break;
+            case 'waiter':
+                show = roleText.includes('mesero');
+                break;
+            case 'cook':
+                show = roleText.includes('cocinero');
+                break;
+            case 'cashier':
+                show = roleText.includes('cajero');
+                break;
+            default:
+                show = true;
+        }
+        
+        card.style.display = show ? 'block' : 'none';
+    });
+}
+
+function getRoleText(role) {
+    const roleTexts = {
+        waiter: 'Mesero',
+        cook: 'Cocinero',
+        cashier: 'Cajero',
+        manager: 'Gerente',
+        admin: 'Administrador'
+    };
+    return roleTexts[role] || role;
+}
+
+function formatTime(dateTimeString) {
+    if (!dateTimeString) return 'N/A';
+    
+    const date = new Date(dateTimeString);
+    return date.toLocaleTimeString('es-ES', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }

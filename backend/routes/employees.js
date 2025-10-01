@@ -268,4 +268,147 @@ router.get('/time-entries', authenticateToken, async (req, res) => {
     }
 });
 
+// Obtener lista de todos los empleados (para admin)
+router.get('/list', async (req, res) => {
+    try {
+        const db = getDB();
+        
+        const employees = await new Promise((resolve, reject) => {
+            db.all(`SELECT 
+                        e.id, 
+                        e.employee_code, 
+                        e.name, 
+                        e.role, 
+                        e.status,
+                        e.hire_date,
+                        (SELECT COUNT(*) FROM time_entries WHERE employee_id = e.id AND DATE(clock_in) = DATE('now')) as today_entries,
+                        (SELECT clock_in FROM time_entries WHERE employee_id = e.id AND clock_out IS NULL ORDER BY clock_in DESC LIMIT 1) as current_session
+                    FROM employees e 
+                    ORDER BY e.name`, (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+
+        res.json({
+            success: true,
+            data: employees
+        });
+    } catch (error) {
+        console.error('Error obteniendo lista de empleados:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
+});
+
+// Obtener fichajes de empleados (para admin)
+router.get('/time-entries', async (req, res) => {
+    try {
+        const { date, employee_id } = req.query;
+        const db = getDB();
+        
+        let query = `SELECT 
+                        te.id,
+                        te.employee_id,
+                        te.clock_in,
+                        te.clock_out,
+                        te.break_time,
+                        te.total_hours,
+                        e.name as employee_name,
+                        e.employee_code,
+                        e.role
+                    FROM time_entries te
+                    JOIN employees e ON te.employee_id = e.id`;
+        
+        const params = [];
+        const conditions = [];
+        
+        if (date) {
+            conditions.push('DATE(te.clock_in) = ?');
+            params.push(date);
+        }
+        
+        if (employee_id) {
+            conditions.push('te.employee_id = ?');
+            params.push(employee_id);
+        }
+        
+        if (conditions.length > 0) {
+            query += ' WHERE ' + conditions.join(' AND ');
+        }
+        
+        query += ' ORDER BY te.clock_in DESC';
+        
+        const timeEntries = await new Promise((resolve, reject) => {
+            db.all(query, params, (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+
+        res.json({
+            success: true,
+            data: timeEntries
+        });
+    } catch (error) {
+        console.error('Error obteniendo fichajes:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
+});
+
+// Obtener estadísticas de empleados (para admin)
+router.get('/stats', async (req, res) => {
+    try {
+        const db = getDB();
+        
+        // Empleados actualmente trabajando
+        const currentlyWorking = await new Promise((resolve, reject) => {
+            db.all(`SELECT 
+                        e.name, 
+                        e.employee_code, 
+                        e.role,
+                        te.clock_in
+                    FROM employees e
+                    JOIN time_entries te ON e.id = te.employee_id
+                    WHERE te.clock_out IS NULL
+                    ORDER BY te.clock_in`, (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows);
+            });
+        });
+
+        // Estadísticas del día
+        const todayStats = await new Promise((resolve, reject) => {
+            db.get(`SELECT 
+                        COUNT(DISTINCT employee_id) as employees_worked_today,
+                        COUNT(*) as total_entries_today,
+                        AVG(total_hours) as avg_hours_today
+                    FROM time_entries 
+                    WHERE DATE(clock_in) = DATE('now')`, (err, row) => {
+                if (err) reject(err);
+                else resolve(row);
+            });
+        });
+
+        res.json({
+            success: true,
+            data: {
+                currently_working: currentlyWorking,
+                today_stats: todayStats
+            }
+        });
+    } catch (error) {
+        console.error('Error obteniendo estadísticas:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error interno del servidor'
+        });
+    }
+});
+
 module.exports = router;
