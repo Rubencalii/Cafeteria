@@ -1470,6 +1470,101 @@ select:focus, .date-filter input:focus {
 }
 
 /* ==========================================
+   ADMIN ACTIONS WIDGET
+   ========================================== */
+.admin-actions-widget {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+    margin-top: 25px;
+}
+
+.admin-actions-widget h3 {
+    color: #6F4E37;
+    margin-bottom: 20px;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.admin-actions-widget h3::before {
+    content: "⚡";
+    font-size: 1.2rem;
+}
+
+.actions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.action-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: linear-gradient(135deg, #f8f9fa, #ffffff);
+    border-radius: 10px;
+    border-left: 4px solid #6F4E37;
+    transition: all 0.3s ease;
+}
+
+.action-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.action-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(111, 78, 55, 0.1);
+    font-size: 1.2rem;
+}
+
+.action-details {
+    flex: 1;
+}
+
+.action-description {
+    margin: 0;
+    font-weight: 600;
+    color: #333;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+
+.action-time {
+    color: #666;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.no-actions {
+    text-align: center;
+    padding: 40px 20px;
+    color: #999;
+}
+
+.no-actions i {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    display: block;
+    opacity: 0.5;
+}
+
+.no-actions p {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+/* ==========================================
    MOBILE RESPONSIVE FOR NEW COMPONENTS
    ========================================== */
 @media (max-width: 768px) {
