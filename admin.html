@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Administración - Café Aroma</title>
     <link rel="stylesheet" href="admin-styles.css">
+    <link rel="stylesheet" href="additional-styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
@@ -280,72 +281,42 @@
             <section id="employeesSection" class="content-section">
                 <div class="section-header">
                     <h3>Gestión de Empleados</h3>
-                    <div class="employee-filters">
-                        <select id="employeeFilter">
-                            <option value="">Todos los empleados</option>
-                            <option value="working">Trabajando ahora</option>
-                            <option value="waiter">Meseros</option>
-                            <option value="cook">Cocineros</option>
-                            <option value="cashier">Cajeros</option>
-                        </select>
-                        <input type="date" id="timeEntriesDate" value="">
-                    </div>
-                </div>
-
-                <!-- Empleados trabajando actualmente -->
-                <div class="employees-working">
-                    <h4><i class="fas fa-clock"></i> Empleados Trabajando Actualmente</h4>
-                    <div id="currentlyWorkingList" class="currently-working-list">
-                        <!-- Se cargarán empleados trabajando -->
-                    </div>
-                </div>
-
-                <!-- Estadísticas del día -->
-                <div class="employee-stats">
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3 id="employeesWorkedToday">0</h3>
-                            <p>Empleados Hoy</p>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3 id="totalEntriesTeday">0</h3>
-                            <p>Fichajes Hoy</p>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card">
-                        <div class="stat-icon">
-                            <i class="fas fa-chart-line"></i>
-                        </div>
-                        <div class="stat-info">
-                            <h3 id="avgHoursToday">0</h3>
-                            <p>Promedio Horas</p>
-                        </div>
+                    <div class="section-actions">
+                        <button class="btn btn-secondary" onclick="refreshEmployees()">
+                            <i class="fas fa-sync-alt"></i> Actualizar
+                        </button>
                     </div>
                 </div>
 
                 <!-- Lista de empleados -->
-                <div class="employees-list-container">
-                    <h4><i class="fas fa-list"></i> Lista de Empleados</h4>
-                    <div id="employeesList" class="employees-list">
-                        <!-- Lista de empleados se cargará aquí -->
+                <div class="data-table-container">
+                    <h4><i class="fas fa-users"></i> Lista de Empleados</h4>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Empleado</th>
+                                    <th>Estado</th>
+                                    <th>Fichajes Hoy</th>
+                                    <th>Estado Actual</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="employeesTableBody">
+                                <tr>
+                                    <td colspan="6" class="text-center">Cargando empleados...</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <!-- Historial de fichajes -->
+                <!-- Registros de tiempo en tiempo real -->
                 <div class="time-entries-container">
-                    <h4><i class="fas fa-history"></i> Historial de Fichajes</h4>
-                    <div id="timeEntriesList" class="time-entries-list">
-                        <!-- Historial de fichajes se cargará aquí -->
+                    <h4><i class="fas fa-clock"></i> Registros de Tiempo (Tiempo Real)</h4>
+                    <div id="employeeTimeEntries" class="time-entries-list">
+                        <p class="loading-text">Cargando registros...</p>
                     </div>
                 </div>
             </section>
@@ -354,18 +325,24 @@
             <section id="analyticsSection" class="content-section">
                 <div class="section-header">
                     <h3>Análisis y Reportes</h3>
+                    <div class="section-actions">
+                        <button class="btn btn-secondary" onclick="refreshAnalytics()">
+                            <i class="fas fa-sync-alt"></i> Actualizar
+                        </button>
+                    </div>
                 </div>
 
-                <div class="analytics-grid">
-                    <div class="chart-container">
-                        <h4>Reservaciones por Mes</h4>
-                        <canvas id="reservationsChart"></canvas>
+                <!-- Estadísticas Generales -->
+                <div id="analyticsStats" class="analytics-stats">
+                    <div class="loading-message">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Cargando análisis...</p>
                     </div>
-                    
-                    <div class="chart-container">
-                        <h4>Elementos Más Populares</h4>
-                        <canvas id="popularItemsChart"></canvas>
-                    </div>
+                </div>
+
+                <!-- Gráficos y Tablas -->
+                <div id="analyticsCharts" class="analytics-charts">
+                    <!-- Los gráficos se cargarán aquí -->
                 </div>
             </section>
 

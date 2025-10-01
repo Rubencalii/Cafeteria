@@ -64,6 +64,9 @@ function setupEventListeners() {
     // Cocina
     setupKitchenEventListeners();
     
+    // Reservas
+    setupReservationsEventListeners();
+    
     // Historial
     setupHistoryEventListeners();
 }
@@ -179,6 +182,8 @@ function showSection(sectionName) {
     // Cargar datos específicos de la sección
     if (sectionName === 'kitchen') {
         loadKitchenOrders();
+    } else if (sectionName === 'reservations') {
+        loadEmployeeReservations();
     } else if (sectionName === 'history') {
         loadTimeEntries();
     }
@@ -634,6 +639,180 @@ function filterMenuByCategory(category) {
 }
 
 // ==========================================
+// RESERVAS PARA EMPLEADOS
+// ==========================================
+
+async function loadEmployeeReservations() {
+    try {
+        // Obtener reservas del localStorage (las nuevas del sitio web)
+        const savedReservations = JSON.parse(localStorage.getItem('reservations') || '[]');
+        
+        // Obtener reservas estáticas
+        const today = new Date().toISOString().split('T')[0];
+        const staticReservations = [
+            {id: 1, name: "Juan Pérez", email: "juan@email.com", date: today, time: "19:00", guests: 2, status: "confirmed", phone: "+34 666 123 456"},
+            {id: 2, name: "María García", email: "maria@email.com", date: today, time: "20:30", guests: 4, status: "pending", phone: "+34 777 234 567"},
+            {id: 3, name: "Carlos López", email: "carlos@email.com", date: today, time: "18:00", guests: 3, status: "confirmed", phone: "+34 888 345 678"}
+        ];
+        
+        // Combinar reservas
+        const allReservations = [...staticReservations, ...savedReservations];
+        
+        // Filtrar solo las de hoy
+        const todayReservations = allReservations.filter(r => r.date === today);
+        
+        // Ordenar por hora
+        todayReservations.sort((a, b) => a.time.localeCompare(b.time));
+        
+        displayEmployeeReservations(todayReservations);
+        updateReservationsSummary(todayReservations);
+        
+        console.log(`📋 Cargadas ${todayReservations.length} reservas para empleados`);
+        
+    } catch (error) {
+        console.error('Error cargando reservas:', error);
+        const container = document.getElementById('reservationsList');
+        if (container) {
+            container.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Error cargando reservas</p>
+                </div>
+            `;
+        }
+    }
+}
+
+function displayEmployeeReservations(reservations) {
+    const container = document.getElementById('reservationsList');
+    if (!container) return;
+    
+    if (reservations.length === 0) {
+        container.innerHTML = `
+            <div class="no-reservations">
+                <i class="fas fa-calendar-times"></i>
+                <p>No hay reservas para hoy</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = reservations.map(reservation => {
+        const statusClass = reservation.status === 'confirmed' ? 'confirmed' : 
+                           reservation.status === 'pending' ? 'pending' : 'cancelled';
+        const statusIcon = reservation.status === 'confirmed' ? '✅' : 
+                          reservation.status === 'pending' ? '⏳' : '❌';
+        
+        return `
+            <div class="reservation-card ${statusClass}">
+                <div class="reservation-header">
+                    <div class="reservation-time">
+                        <i class="fas fa-clock"></i>
+                        <strong>${reservation.time}</strong>
+                    </div>
+                    <div class="reservation-status">
+                        ${statusIcon} ${getReservationStatusText(reservation.status)}
+                    </div>
+                </div>
+                
+                <div class="reservation-details">
+                    <div class="customer-info">
+                        <h4><i class="fas fa-user"></i> ${reservation.name}</h4>
+                        <p><i class="fas fa-users"></i> ${reservation.guests} persona${reservation.guests > 1 ? 's' : ''}</p>
+                        <p><i class="fas fa-phone"></i> ${reservation.phone}</p>
+                    </div>
+                    
+                    ${reservation.message ? `
+                        <div class="reservation-notes">
+                            <i class="fas fa-sticky-note"></i>
+                            <p>${reservation.message}</p>
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <div class="reservation-actions">
+                    <button class="table-suggestion-btn" onclick="suggestTable(${reservation.guests})">
+                        <i class="fas fa-table"></i>
+                        Sugerir Mesa
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateReservationsSummary(reservations) {
+    const todayCount = reservations.length;
+    const totalGuests = reservations.reduce((sum, r) => sum + r.guests, 0);
+    const confirmedReservations = reservations.filter(r => r.status === 'confirmed');
+    
+    // Próxima reserva
+    const nextReservation = confirmedReservations
+        .filter(r => r.time > new Date().toTimeString().substr(0, 5))
+        .sort((a, b) => a.time.localeCompare(b.time))[0];
+    
+    document.getElementById('todayReservationsCount').textContent = todayCount;
+    document.getElementById('totalGuestsCount').textContent = totalGuests;
+    document.getElementById('nextReservationTime').textContent = nextReservation ? nextReservation.time : '--:--';
+}
+
+function getReservationStatusText(status) {
+    const statusMap = {
+        'confirmed': 'Confirmada',
+        'pending': 'Pendiente',
+        'cancelled': 'Cancelada'
+    };
+    return statusMap[status] || status;
+}
+
+function suggestTable(guests) {
+    let suggestedTables = [];
+    
+    if (guests <= 2) {
+        suggestedTables = ['Mesa 1', 'Mesa 2', 'Mesa 5', 'Mesa 8'];
+    } else if (guests <= 4) {
+        suggestedTables = ['Mesa 3', 'Mesa 4', 'Mesa 6', 'Mesa 7'];
+    } else if (guests <= 6) {
+        suggestedTables = ['Mesa 9', 'Mesa 10', 'Mesa 11'];
+    } else {
+        suggestedTables = ['Mesa 12 (Salón)', 'Unir mesas 3+4'];
+    }
+    
+    showNotification(`Mesas recomendadas para ${guests} personas: ${suggestedTables.join(', ')}`, 'info');
+}
+
+function filterEmployeeReservations(status) {
+    const cards = document.querySelectorAll('.reservation-card');
+    
+    cards.forEach(card => {
+        if (status === 'all' || card.classList.contains(status)) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+    
+    // Actualizar botones activos
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`[data-status="${status}"]`).classList.add('active');
+}
+
+// Configurar filtros de reservas
+function setupReservationsEventListeners() {
+    const filterBtns = document.querySelectorAll('.reservations-filters .filter-btn');
+    filterBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const status = e.target.dataset.status;
+            if (status) {
+                filterEmployeeReservations(status);
+            }
+        });
+    });
+}
+
+// ==========================================
 // COCINA/BAR
 // ==========================================
 
@@ -650,12 +829,19 @@ function setupKitchenEventListeners() {
         });
     });
     
-    // Auto-refresh cada 30 segundos
+    // Auto-refresh cada 30 segundos para cocina
     setInterval(() => {
         if (document.getElementById('kitchenSection').classList.contains('active')) {
             loadKitchenOrders();
         }
     }, 30000);
+    
+    // Auto-refresh cada 10 segundos para reservas
+    setInterval(() => {
+        if (document.getElementById('reservationsSection').classList.contains('active')) {
+            loadEmployeeReservations();
+        }
+    }, 10000);
 }
 
 async function loadKitchenOrders() {
@@ -1088,3 +1274,5 @@ function showNotification(message, type = 'info') {
 window.changeQuantity = changeQuantity;
 window.removeOrderItem = removeOrderItem;
 window.updateOrderStatus = updateOrderStatus;
+window.loadEmployeeReservations = loadEmployeeReservations;
+window.suggestTable = suggestTable;

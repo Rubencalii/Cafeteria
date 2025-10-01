@@ -281,8 +281,8 @@ router.get('/list', async (req, res) => {
                         e.role, 
                         e.status,
                         e.hire_date,
-                        (SELECT COUNT(*) FROM time_entries WHERE employee_id = e.id AND DATE(clock_in) = DATE('now')) as today_entries,
-                        (SELECT clock_in FROM time_entries WHERE employee_id = e.id AND clock_out IS NULL ORDER BY clock_in DESC LIMIT 1) as current_session
+                        (SELECT COUNT(*) FROM time_entries WHERE employee_id = e.id AND DATE(timestamp) = DATE('now')) as today_entries,
+                        (SELECT COUNT(*) FROM time_entries te WHERE te.employee_id = e.id AND te.entry_type = 'clock_in' AND NOT EXISTS (SELECT 1 FROM time_entries te2 WHERE te2.employee_id = e.id AND te2.entry_type = 'clock_out' AND te2.timestamp > te.timestamp)) as current_session
                     FROM employees e 
                     ORDER BY e.name`, (err, rows) => {
                 if (err) reject(err);
@@ -303,8 +303,8 @@ router.get('/list', async (req, res) => {
     }
 });
 
-// Obtener fichajes de empleados (para admin)
-router.get('/time-entries', async (req, res) => {
+// Obtener fichajes de empleados (para admin) - Nueva ruta para evitar conflicto
+router.get('/admin/time-entries', async (req, res) => {
     try {
         const { date, employee_id } = req.query;
         const db = getDB();
@@ -312,10 +312,9 @@ router.get('/time-entries', async (req, res) => {
         let query = `SELECT 
                         te.id,
                         te.employee_id,
-                        te.clock_in,
-                        te.clock_out,
-                        te.break_time,
-                        te.total_hours,
+                        te.entry_type,
+                        te.timestamp,
+                        te.notes,
                         e.name as employee_name,
                         e.employee_code,
                         e.role
@@ -326,7 +325,7 @@ router.get('/time-entries', async (req, res) => {
         const conditions = [];
         
         if (date) {
-            conditions.push('DATE(te.clock_in) = ?');
+            conditions.push('DATE(te.timestamp) = ?');
             params.push(date);
         }
         
@@ -339,7 +338,7 @@ router.get('/time-entries', async (req, res) => {
             query += ' WHERE ' + conditions.join(' AND ');
         }
         
-        query += ' ORDER BY te.clock_in DESC';
+        query += ' ORDER BY te.timestamp DESC LIMIT 50';
         
         const timeEntries = await new Promise((resolve, reject) => {
             db.all(query, params, (err, rows) => {
@@ -368,15 +367,21 @@ router.get('/stats', async (req, res) => {
         
         // Empleados actualmente trabajando
         const currentlyWorking = await new Promise((resolve, reject) => {
-            db.all(`SELECT 
+            db.all(`SELECT DISTINCT
                         e.name, 
                         e.employee_code, 
                         e.role,
-                        te.clock_in
+                        te.timestamp as clock_in
                     FROM employees e
                     JOIN time_entries te ON e.id = te.employee_id
-                    WHERE te.clock_out IS NULL
-                    ORDER BY te.clock_in`, (err, rows) => {
+                    WHERE te.entry_type = 'clock_in' 
+                    AND NOT EXISTS (
+                        SELECT 1 FROM time_entries te2 
+                        WHERE te2.employee_id = e.id 
+                        AND te2.entry_type = 'clock_out' 
+                        AND te2.timestamp > te.timestamp
+                    )
+                    ORDER BY te.timestamp DESC`, (err, rows) => {
                 if (err) reject(err);
                 else resolve(rows);
             });
@@ -387,9 +392,9 @@ router.get('/stats', async (req, res) => {
             db.get(`SELECT 
                         COUNT(DISTINCT employee_id) as employees_worked_today,
                         COUNT(*) as total_entries_today,
-                        AVG(total_hours) as avg_hours_today
+                        0 as avg_hours_today
                     FROM time_entries 
-                    WHERE DATE(clock_in) = DATE('now')`, (err, row) => {
+                    WHERE DATE(timestamp) = DATE('now')`, (err, row) => {
                 if (err) reject(err);
                 else resolve(row);
             });

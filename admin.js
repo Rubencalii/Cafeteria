@@ -279,6 +279,7 @@ function showSection(sectionName) {
             break;
         case 'analytics':
             loadAnalytics();
+            loadAnalyticsCharts();
             break;
         case 'settings':
             loadSettings();
@@ -1057,10 +1058,10 @@ function displayContacts(contacts) {
             </td>
             <td>
                 <div class="action-buttons">
-                    <button class="btn-icon view" onclick="viewContactMessage(${JSON.stringify(contact).replace(/"/g, '&quot;')})" title="Ver mensaje">
+                    <button class="btn-icon view" onclick="viewContactMessage(${contact.id})" title="Ver mensaje">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="btn-icon reply" onclick="openContactReplyModal(${JSON.stringify(contact).replace(/"/g, '&quot;')})" title="Responder por email">
+                    <button class="btn-icon reply" onclick="replyToContact(${contact.id})" title="Responder por email">
                         <i class="fas fa-reply"></i>
                     </button>
                     <button class="btn-icon edit" onclick="markContactAsRead(${contact.id})" title="Marcar como leído">
@@ -1242,7 +1243,7 @@ function displayEmployees(employees) {
 
 async function loadEmployeeTimeEntries() {
     try {
-        const response = await fetch('/api/employees/time-entries', {
+        const response = await fetch('/api/employees/admin/time-entries', {
             headers: {
                 'Authorization': `Bearer ${authToken}`,
                 'Content-Type': 'application/json'
@@ -1274,21 +1275,30 @@ function displayTimeEntries(entries) {
     }
     
     container.innerHTML = entries.slice(0, 10).map(entry => {
-        const entryTime = new Date(entry.clock_in);
-        const duration = entry.total_hours ? `${entry.total_hours.toFixed(2)}h` : 'En curso';
+        const entryTime = new Date(entry.timestamp);
+        const entryTypeMap = {
+            'clock_in': '🟢 Entrada',
+            'clock_out': '🔴 Salida',
+            'break_start': '☕ Inicio Descanso',
+            'break_end': '💼 Fin Descanso'
+        };
+        
+        const entryType = entryTypeMap[entry.entry_type] || '❓ Desconocido';
+        const duration = entry.duration ? `${entry.duration} min` : 'En curso';
         
         return `
             <div class="time-entry-item">
                 <div class="entry-employee">
                     <strong>${entry.employee_name}</strong>
-                    <small>${entry.role}</small>
+                    <small>${entry.role} (${entry.employee_code})</small>
                 </div>
                 <div class="entry-details">
+                    <div class="entry-type">${entryType}</div>
                     <div class="entry-time">${entryTime.toLocaleString('es-ES')}</div>
                     <div class="entry-duration">${duration}</div>
                 </div>
-                <div class="entry-status ${entry.clock_out ? 'completed' : 'active'}">
-                    ${entry.clock_out ? '✅ Completado' : '🟢 Activo'}
+                <div class="entry-status ${entry.entry_type === 'clock_out' ? 'completed' : 'active'}">
+                    ${entry.entry_type === 'clock_out' ? '✅ Completado' : '🟢 Activo'}
                 </div>
             </div>
         `;
@@ -1299,6 +1309,279 @@ function refreshEmployees() {
     loadEmployeesSection();
     loadEmployeeTimeEntries();
     showNotification('Empleados actualizados', 'success');
+}
+
+// ==========================================
+// ANÁLISIS Y REPORTES
+// ==========================================
+
+async function loadAnalytics() {
+    try {
+        showLoading(true);
+        
+        // Obtener datos de diferentes fuentes
+        const reservationsData = await getAnalyticsData('reservations');
+        const menuData = await getAnalyticsData('menu');
+        const employeesData = await getAnalyticsData('employees');
+        const ordersData = await getAnalyticsData('orders');
+        
+        // Mostrar estadísticas generales
+        displayAnalyticsStats({
+            reservations: reservationsData,
+            menu: menuData,
+            employees: employeesData,
+            orders: ordersData
+        });
+        
+        console.log('✅ Análisis cargado correctamente');
+        
+    } catch (error) {
+        console.error('❌ Error cargando análisis:', error);
+        showNotification('Error cargando análisis: ' + error.message, 'error');
+    } finally {
+        showLoading(false);
+    }
+}
+
+async function getAnalyticsData(type) {
+    const today = new Date();
+    const thisMonth = today.getMonth();
+    const thisYear = today.getFullYear();
+    
+    switch (type) {
+        case 'reservations':
+            const savedReservations = JSON.parse(localStorage.getItem('reservations') || '[]');
+            const staticReservations = window.staticData?.reservations || [];
+            const allReservations = [...staticReservations, ...savedReservations];
+            
+            return {
+                total: allReservations.length,
+                thisMonth: allReservations.filter(r => {
+                    const date = new Date(r.date);
+                    return date.getMonth() === thisMonth && date.getFullYear() === thisYear;
+                }).length,
+                confirmed: allReservations.filter(r => r.status === 'confirmed').length,
+                pending: allReservations.filter(r => r.status === 'pending').length,
+                cancelled: allReservations.filter(r => r.status === 'cancelled').length,
+                byMonth: getReservationsByMonth(allReservations)
+            };
+            
+        case 'menu':
+            const menuItems = window.staticData?.menu || [];
+            return {
+                total: menuItems.length,
+                available: menuItems.filter(m => m.available).length,
+                byCategory: getMenuByCategory(menuItems)
+            };
+            
+        case 'employees':
+            // Simular datos de empleados
+            return {
+                total: 4,
+                active: 4,
+                workingToday: 2,
+                totalHoursToday: 16
+            };
+            
+        case 'orders':
+            const savedOrders = JSON.parse(localStorage.getItem('kitchenOrders') || '[]');
+            const todayOrders = savedOrders.filter(o => {
+                const orderDate = new Date(o.created_at);
+                const today = new Date();
+                return orderDate.toDateString() === today.toDateString();
+            });
+            
+            return {
+                total: savedOrders.length,
+                today: todayOrders.length,
+                revenue: todayOrders.reduce((sum, o) => sum + (o.total_amount || 0), 0),
+                byStatus: getOrdersByStatus(savedOrders)
+            };
+            
+        default:
+            return {};
+    }
+}
+
+function getReservationsByMonth(reservations) {
+    const months = {};
+    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    
+    // Inicializar últimos 6 meses
+    for (let i = 5; i >= 0; i--) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        const monthKey = monthNames[date.getMonth()];
+        months[monthKey] = 0;
+    }
+    
+    reservations.forEach(r => {
+        const date = new Date(r.date);
+        const monthKey = monthNames[date.getMonth()];
+        if (months.hasOwnProperty(monthKey)) {
+            months[monthKey]++;
+        }
+    });
+    
+    return months;
+}
+
+function getMenuByCategory(menuItems) {
+    const categories = {};
+    menuItems.forEach(item => {
+        categories[item.category] = (categories[item.category] || 0) + 1;
+    });
+    return categories;
+}
+
+function getOrdersByStatus(orders) {
+    const statuses = {
+        pending: 0,
+        preparing: 0,
+        ready: 0,
+        served: 0,
+        cancelled: 0
+    };
+    
+    orders.forEach(order => {
+        if (statuses.hasOwnProperty(order.status)) {
+            statuses[order.status]++;
+        }
+    });
+    
+    return statuses;
+}
+
+function displayAnalyticsStats(data) {
+    // Actualizar estadísticas en la interfaz
+    const statsContainer = document.getElementById('analyticsStats');
+    if (statsContainer) {
+        statsContainer.innerHTML = `
+            <div class="analytics-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>${data.reservations.total}</h3>
+                        <p>Total Reservas</p>
+                        <small>${data.reservations.thisMonth} este mes</small>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-utensils"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>${data.menu.total}</h3>
+                        <p>Items del Menú</p>
+                        <small>${data.menu.available} disponibles</small>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>${data.employees.total}</h3>
+                        <p>Empleados</p>
+                        <small>${data.employees.workingToday} trabajando hoy</small>
+                    </div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>€${data.orders.revenue.toFixed(2)}</h3>
+                        <p>Ingresos Hoy</p>
+                        <small>${data.orders.today} pedidos</small>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+}
+
+async function loadAnalyticsCharts() {
+    try {
+        // Cargar y mostrar gráficos si existe la librería Chart.js
+        if (typeof Chart !== 'undefined') {
+            await loadReservationsChart();
+            await loadPopularItemsChart();
+        } else {
+            console.log('📊 Chart.js no disponible, mostrando datos tabulares');
+            showTabularAnalytics();
+        }
+    } catch (error) {
+        console.error('Error cargando gráficos:', error);
+        showTabularAnalytics();
+    }
+}
+
+function showTabularAnalytics() {
+    const chartsContainer = document.getElementById('analyticsCharts');
+    if (chartsContainer) {
+        chartsContainer.innerHTML = `
+            <div class="analytics-tables">
+                <div class="table-card">
+                    <h4>📅 Reservas por Estado</h4>
+                    <div class="simple-chart">
+                        <div class="chart-item">
+                            <span class="chart-label">Confirmadas</span>
+                            <div class="chart-bar confirmed" style="width: 70%"></div>
+                            <span class="chart-value">70%</span>
+                        </div>
+                        <div class="chart-item">
+                            <span class="chart-label">Pendientes</span>
+                            <div class="chart-bar pending" style="width: 20%"></div>
+                            <span class="chart-value">20%</span>
+                        </div>
+                        <div class="chart-item">
+                            <span class="chart-label">Canceladas</span>
+                            <div class="chart-bar cancelled" style="width: 10%"></div>
+                            <span class="chart-value">10%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-card">
+                    <h4>🍽️ Categorías Más Populares</h4>
+                    <div class="simple-chart">
+                        <div class="chart-item">
+                            <span class="chart-label">Café Caliente</span>
+                            <div class="chart-bar popular" style="width: 40%"></div>
+                            <span class="chart-value">40%</span>
+                        </div>
+                        <div class="chart-item">
+                            <span class="chart-label">Desayunos</span>
+                            <div class="chart-bar popular" style="width: 30%"></div>
+                            <span class="chart-value">30%</span>
+                        </div>
+                        <div class="chart-item">
+                            <span class="chart-label">Postres</span>
+                            <div class="chart-bar popular" style="width: 20%"></div>
+                            <span class="chart-value">20%</span>
+                        </div>
+                        <div class="chart-item">
+                            <span class="chart-label">Café Frío</span>
+                            <div class="chart-bar popular" style="width: 10%"></div>
+                            <span class="chart-value">10%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+}
+
+function refreshAnalytics() {
+    loadAnalytics();
+    loadAnalyticsCharts();
+    showNotification('Análisis actualizado', 'success');
 }
 
 // ==========================================
@@ -1953,6 +2236,212 @@ function viewContactMessage(contact) {
 function openContactReplyModal(contact) {
     console.log('Preparando respuesta para:', contact.name);
     showNotification(`Función de respuesta por email en desarrollo. Contacto: ${contact.name}`, 'info');
+}
+
+function closeContactModal() {
+    const modal = document.querySelector('.contact-modal-overlay');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function markContactAsRead(contactId) {
+    try {
+        // Buscar en localStorage
+        const savedMessages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+        const messageIndex = savedMessages.findIndex(m => m.id === contactId);
+        
+        if (messageIndex !== -1) {
+            savedMessages[messageIndex].status = 'read';
+            localStorage.setItem('contactMessages', JSON.stringify(savedMessages));
+            showNotification('Mensaje marcado como leído', 'success');
+            loadContacts();
+            closeContactModal();
+        } else {
+            // Si no está en localStorage, simular actualización
+            showNotification('Mensaje marcado como leído', 'success');
+            loadContacts();
+            closeContactModal();
+        }
+    } catch (error) {
+        console.error('Error marcando mensaje como leído:', error);
+        showNotification('Error marcando mensaje como leído', 'error');
+    }
+}
+
+function replyToContact(contactId) {
+    showNotification('Función de respuesta por email en desarrollo', 'info');
+}
+
+// Funciones auxiliares para formateo
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
+}
+
+function formatDateTime(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleString('es-ES');
+}
+
+function getStatusText(status) {
+    const statusTexts = {
+        'confirmed': 'Confirmada',
+        'pending': 'Pendiente',
+        'cancelled': 'Cancelada'
+    };
+    return statusTexts[status] || status;
+}
+
+// Funciones para empleados
+async function viewEmployeeDetails(employeeId) {
+    try {
+        showNotification('Cargando detalles del empleado...', 'info');
+        
+        const response = await fetch(`/api/employees/${employeeId}`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                showEmployeeModal(result.data);
+            }
+        } else {
+            throw new Error('Error cargando empleado');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showNotification('Error cargando detalles del empleado', 'error');
+    }
+}
+
+function showEmployeeModal(employee) {
+    const modal = document.createElement('div');
+    modal.className = 'employee-modal-overlay';
+    modal.innerHTML = `
+        <div class="employee-modal-content">
+            <div class="employee-modal-header">
+                <h3>👤 Detalles del Empleado</h3>
+                <button onclick="closeEmployeeModal()" class="close-btn">&times;</button>
+            </div>
+            <div class="employee-modal-body">
+                <div class="employee-info">
+                    <p><strong>Código:</strong> ${employee.employee_code}</p>
+                    <p><strong>Nombre:</strong> ${employee.name}</p>
+                    <p><strong>Rol:</strong> ${employee.role}</p>
+                    <p><strong>Estado:</strong> <span class="status-badge ${employee.status === 'active' ? 'status-confirmed' : 'status-cancelled'}">${employee.status === 'active' ? 'Activo' : 'Inactivo'}</span></p>
+                    <p><strong>Fecha de creación:</strong> ${formatDate(employee.created_at)}</p>
+                </div>
+                <div class="employee-stats">
+                    <h4>📊 Estadísticas Hoy</h4>
+                    <p><strong>Entradas registradas:</strong> ${employee.today_entries || 0}</p>
+                    <p><strong>Estado actual:</strong> ${employee.current_session ? '🟢 Trabajando' : '🔴 Fuera'}</p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function closeEmployeeModal() {
+    const modal = document.querySelector('.employee-modal-overlay');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+async function editEmployee(employeeId) {
+    showNotification('Función de edición de empleados en desarrollo', 'info');
+}
+
+// Función para actualizar las estadísticas del dashboard
+function updateDashboardStats() {
+    if (window.staticData) {
+        loadDashboardDataStatic();
+    }
+}
+
+// Función para log de acciones de reservas
+function logReservationAction(reservationId, action, adminName) {
+    const actions = JSON.parse(localStorage.getItem('reservationActions') || '[]');
+    actions.unshift({
+        id: Date.now(),
+        reservationId,
+        action,
+        adminName,
+        timestamp: new Date().toISOString()
+    });
+    
+    // Mantener solo los últimos 50 registros
+    if (actions.length > 50) {
+        actions.splice(50);
+    }
+    
+    localStorage.setItem('reservationActions', JSON.stringify(actions));
+}
+
+// Función para mostrar historial de acciones
+function loadActionHistoryWidget() {
+    const container = document.getElementById('actionHistory');
+    if (!container) return;
+    
+    const actions = JSON.parse(localStorage.getItem('reservationActions') || '[]');
+    
+    if (actions.length === 0) {
+        container.innerHTML = '<p class="no-actions">No hay acciones recientes</p>';
+        return;
+    }
+    
+    container.innerHTML = `
+        <h4>📋 Acciones Recientes</h4>
+        <div class="action-list">
+            ${actions.slice(0, 5).map(action => `
+                <div class="action-item">
+                    <div class="action-details">
+                        <strong>Reserva #${action.reservationId}</strong> - ${action.action}
+                        <small>por ${action.adminName}</small>
+                    </div>
+                    <div class="action-time">
+                        ${formatDateTime(action.timestamp)}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+// Función para actualizar paginación de contactos
+function updateContactsPagination(pagination) {
+    const paginationContainer = document.getElementById('contactsPagination');
+    if (!paginationContainer || !pagination) return;
+    
+    const { page, pages, total } = pagination;
+    
+    paginationContainer.innerHTML = `
+        <div class="pagination-info">
+            Mostrando página ${page} de ${pages} (${total} mensajes total)
+        </div>
+        <div class="pagination-controls">
+            <button onclick="loadContacts(${page - 1})" ${page <= 1 ? 'disabled' : ''} class="btn btn-secondary">
+                <i class="fas fa-chevron-left"></i> Anterior
+            </button>
+            <span class="page-info">Página ${page} de ${pages}</span>
+            <button onclick="loadContacts(${page + 1})" ${page >= pages ? 'disabled' : ''} class="btn btn-secondary">
+                Siguiente <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    `;
 }
 
 function markContactAsRead(contactId) {

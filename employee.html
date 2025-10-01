@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel de Empleados - Café Aroma</title>
     <link rel="stylesheet" href="employee-styles.css">
+    <link rel="stylesheet" href="additional-styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -90,6 +91,10 @@
             <button class="nav-btn" data-section="orders">
                 <i class="fas fa-clipboard-list"></i>
                 Pedidos
+            </button>
+            <button class="nav-btn" data-section="reservations">
+                <i class="fas fa-calendar-alt"></i>
+                Reservas
             </button>
             <button class="nav-btn" data-section="kitchen">
                 <i class="fas fa-utensils"></i>
@@ -223,6 +228,60 @@
                         <span class="stat-number" id="totalSales">€0</span>
                         <span class="stat-label">Ventas Totales</span>
                     </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sección de Reservas -->
+        <section id="reservationsSection" class="content-section">
+            <div class="section-header">
+                <h2><i class="fas fa-calendar-alt"></i> Reservas del Día</h2>
+                <div class="reservations-filters">
+                    <button class="filter-btn active" data-status="all">Todas</button>
+                    <button class="filter-btn" data-status="confirmed">Confirmadas</button>
+                    <button class="filter-btn" data-status="pending">Pendientes</button>
+                    <button class="refresh-btn" onclick="loadEmployeeReservations()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="reservations-summary">
+                <div class="summary-card">
+                    <div class="summary-icon">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                    <div class="summary-info">
+                        <h3 id="todayReservationsCount">0</h3>
+                        <p>Reservas Hoy</p>
+                    </div>
+                </div>
+                
+                <div class="summary-card">
+                    <div class="summary-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="summary-info">
+                        <h3 id="totalGuestsCount">0</h3>
+                        <p>Comensales</p>
+                    </div>
+                </div>
+                
+                <div class="summary-card">
+                    <div class="summary-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="summary-info">
+                        <h3 id="nextReservationTime">--:--</h3>
+                        <p>Próxima Reserva</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="reservationsList" class="reservations-list">
+                <div class="loading-message">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Cargando reservas...</p>
                 </div>
             </div>
         </section>

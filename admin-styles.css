@@ -2097,6 +2097,224 @@ select:focus, .date-filter input:focus {
     }
 }
 
+/* ==========================================
+   EMPLOYEES SECTION - TIME ENTRIES
+   ========================================== */
+
+.time-entries-container {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    margin-top: 20px;
+}
+
+.time-entries-container h4 {
+    color: var(--primary-color);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.time-entries-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.time-entry-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    margin-bottom: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+    transition: var(--transition);
+}
+
+.time-entry-item:hover {
+    background: #e9ecef;
+    transform: translateX(5px);
+}
+
+.entry-employee {
+    flex: 1;
+}
+
+.entry-employee strong {
+    color: var(--dark-gray);
+    font-size: 14px;
+}
+
+.entry-employee small {
+    color: var(--medium-gray);
+    display: block;
+    text-transform: capitalize;
+}
+
+.entry-details {
+    flex: 2;
+    text-align: center;
+}
+
+.entry-time {
+    font-size: 13px;
+    color: var(--dark-gray);
+    font-weight: 500;
+}
+
+.entry-duration {
+    font-size: 12px;
+    color: var(--medium-gray);
+}
+
+.entry-status {
+    flex: 1;
+    text-align: right;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 15px;
+}
+
+.entry-status.completed {
+    background: rgba(40, 167, 69, 0.1);
+    color: var(--success-color);
+}
+
+.entry-status.active {
+    background: rgba(255, 193, 7, 0.1);
+    color: var(--warning-color);
+    animation: pulse-yellow 2s infinite;
+}
+
+@keyframes pulse-yellow {
+    0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.4); }
+    70% { box-shadow: 0 0 0 5px rgba(255, 193, 7, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+}
+
+.no-entries {
+    text-align: center;
+    color: var(--medium-gray);
+    font-style: italic;
+    padding: 40px;
+}
+
+.loading-text {
+    text-align: center;
+    color: var(--medium-gray);
+    padding: 20px;
+    font-style: italic;
+}
+
+/* Contact Modal Styles */
+.contact-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    animation: fadeIn 0.3s ease;
+}
+
+.contact-modal-content {
+    background: var(--white);
+    border-radius: var(--border-radius);
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-hover);
+}
+
+.contact-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+    background: var(--light-brown);
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+}
+
+.contact-modal-header h3 {
+    color: var(--primary-color);
+    margin: 0;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--medium-gray);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.close-btn:hover {
+    color: var(--danger-color);
+}
+
+.contact-modal-body {
+    padding: 20px;
+}
+
+.contact-info {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.contact-info p {
+    margin: 5px 0;
+}
+
+.contact-message h4 {
+    color: var(--primary-color);
+    margin-bottom: 10px;
+}
+
+.message-content {
+    background: var(--white);
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+    line-height: 1.6;
+}
+
+.contact-modal-actions {
+    padding: 20px;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+/* Error message styles */
+.error-message {
+    color: var(--danger-color);
+    text-align: center;
+    padding: 20px;
+    background: rgba(220, 53, 69, 0.1);
+    border-radius: 8px;
+    margin: 10px 0;
+}
+
+.error-message i {
+    font-size: 24px;
+    margin-bottom: 10px;
+    display: block;
+}
+
 /* Mobile responsive for employees section */
 @media (max-width: 768px) {
     .employee-filters {
@@ -2125,7 +2343,20 @@ select:focus, .date-filter input:focus {
         gap: 10px;
     }
     
-    .time-entry-times {
-        justify-content: space-around;
+    .entry-details {
+        text-align: left;
+    }
+    
+    .entry-status {
+        text-align: left;
+    }
+    
+    .contact-modal-content {
+        width: 95%;
+        margin: 10px;
+    }
+    
+    .contact-modal-actions {
+        flex-direction: column;
     }
 }
