@@ -31,7 +31,7 @@ const authenticateToken = (req, res, next) => {
 
 // Middleware para verificar rol de administrador
 const requireAdmin = (req, res, next) => {
-    if (req.user.role !== 'admin') {
+    if (req.user && req.user.role !== 'admin') {
         return res.status(403).json({
             success: false,
             message: 'Acceso denegado: Se requieren permisos de administrador'
@@ -40,8 +40,12 @@ const requireAdmin = (req, res, next) => {
     next();
 };
 
+// Alias para compatibilidad
+const isAdmin = requireAdmin;
+
 module.exports = {
     authenticateToken,
     requireAdmin,
+    isAdmin,
     JWT_SECRET
 };

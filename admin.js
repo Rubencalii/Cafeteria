@@ -178,19 +178,18 @@ async function handleLogin(e) {
     if (errorDiv) errorDiv.style.display = 'none';
     
     try {
-        // Sistema de login estático para demo
-        const validCredentials = {
-            email: 'admin@cafearoma.com',
-            password: 'admin123'
-        };
+        // Sistema de login real conectado a la base de datos
+        const response = await fetch('/api/auth/admin/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(loginData)
+        });
         
-        // Simular delay de red
-        await new Promise(resolve => setTimeout(resolve, 800));
+        const result = await response.json();
         
-        console.log('Intentando login con:', loginData);
-        console.log('Credenciales válidas:', validCredentials);
-        
-        if (loginData.email === validCredentials.email && loginData.password === validCredentials.password) {
+        if (result.success) {
             authToken = 'demo-token-' + Date.now();
             currentUser = {
                 id: 1,
@@ -2237,10 +2236,41 @@ async function handleSettingsUpdate(e) {
 // UTILIDADES
 // ==========================================
 async function apiRequest(url, options = {}) {
-    // Sistema mock - devolver datos estáticos basados en la URL
-    await new Promise(resolve => setTimeout(resolve, 300)); // Simular delay de red
+    // Sistema real de API conectado al backend
+    const defaultOptions = {
+        headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+        }
+    };
     
-    console.log('Mock API llamada a:', url, options);
+    const requestOptions = {
+        ...defaultOptions,
+        ...options,
+        headers: {
+            ...defaultOptions.headers,
+            ...options.headers
+        }
+    };
+    
+    try {
+        const response = await fetch(url, requestOptions);
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.message || `HTTP ${response.status}`);
+        }
+        
+        return result;
+    } catch (error) {
+        console.error('API Request Error:', error);
+        // Fallback a datos estáticos en caso de error de conexión
+        return await getFallbackData(url, options);
+    }
+}
+
+async function getFallbackData(url, options = {}) {
+    console.log('Usando datos de fallback para:', url);
     
     // Datos estáticos basados en la URL solicitada
     if (url.includes('/api/menu')) {

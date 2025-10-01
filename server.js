@@ -2,7 +2,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const http = require('http');
+
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 
 // Middleware
@@ -13,6 +16,10 @@ app.use(express.urlencoded({ extended: true }));
 // Servir archivos estáticos (frontend)
 app.use(express.static(path.join(__dirname)));
 
+// Inicializar sistema de notificaciones
+const NotificationServer = require('./backend/services/notificationService');
+const notificationServer = new NotificationServer(server);
+
 // Routes
 const reservationsRouter = require('./backend/routes/reservations');
 const contactRouter = require('./backend/routes/contact');
@@ -21,6 +28,8 @@ const menuRouter = require('./backend/routes/menu');
 const emailRouter = require('./backend/routes/email');
 const employeesRouter = require('./backend/routes/employees');
 const ordersRouter = require('./backend/routes/orders');
+const reportsRouter = require('./backend/routes/reports');
+const backupRouter = require('./backend/routes/backup');
 
 app.use('/api/reservations', reservationsRouter);
 app.use('/api/contact', contactRouter);
@@ -29,6 +38,11 @@ app.use('/api/menu', menuRouter);
 app.use('/api/email', emailRouter);
 app.use('/api/employees', employeesRouter);
 app.use('/api/orders', ordersRouter);
+app.use('/api/reports', reportsRouter);
+app.use('/api/backup', backupRouter);
+
+// Hacer el servidor de notificaciones disponible globalmente
+app.set('notificationServer', notificationServer);
 
 // Ruta principal para servir la página web
 app.get('/', (req, res) => {
@@ -57,9 +71,10 @@ app.use('*', (req, res) => {
     });
 });
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`🍃 Servidor Café Aroma ejecutándose en http://localhost:${PORT}`);
     console.log(`📊 Panel admin disponible en http://localhost:${PORT}/admin`);
+    console.log(`🔌 WebSocket servidor iniciado en ws://localhost:${PORT}/ws`);
 });
 
 module.exports = app;
